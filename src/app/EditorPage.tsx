@@ -12,11 +12,26 @@ import {
   STRENGTH_DESCRIPTIONS,
   AUDIENCES,
   AUDIENCE_LABELS,
+  DOCUMENT_TYPES,
+  DOCUMENT_TYPE_LABELS,
+  DOCUMENT_TYPE_DESCRIPTIONS,
+  FORMALITY_LEVELS,
+  DIRECTNESS_LEVELS,
+  CONCISENESS_LEVELS,
+  TECHNICAL_DEPTH_LEVELS,
+  FEEDBACK_CATEGORIES,
   APP_CONFIG,
   type Tone,
   type Strength,
   type Audience,
+  type DocumentType,
+  type VoicePreferences,
+  type FormalityLevel,
+  type DirectnessLevel,
+  type ConcisenessLevel,
+  type TechnicalDepthLevel,
   type PromptVersion,
+  type FeedbackCategory,
   type HumanizeResponse,
 } from '../shared/schemas';
 import {
@@ -36,10 +51,29 @@ import {
   ChevronUp,
   Star,
   ShieldAlert,
+  Sparkles,
+  Columns,
+  FileEdit,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import './EditorPage.css';
+
+const FEEDBACK_CATEGORY_LABELS: Record<FeedbackCategory, string> = {
+  good_result: 'Natural & accurate',
+  meaning_changed: 'Meaning or facts changed',
+  awkward_result: 'Awkward or robotic phrasing',
+  too_formal: 'Too stiff / overly formal',
+  too_casual: 'Too casual / informal',
+  too_verbose: 'Too verbose / padded',
+  unclear_wording: 'Unclear wording',
+  quality: 'General quality issue',
+  accuracy: 'Factual inaccuracy',
+  tone: 'Tone mismatch',
+  speed: 'Latency / Speed issue',
+  ui: 'Editor interface issue',
+  other: 'Other feedback',
+};
 
 export function EditorPage() {
   const { user } = useAuth();
@@ -49,23 +83,35 @@ export function EditorPage() {
   const [tone, setTone] = useState<Tone>('professional');
   const [strength, setStrength] = useState<Strength>('balanced');
   const [audience, setAudience] = useState<Audience>('general');
+  const [documentType, setDocumentType] = useState<DocumentType>('general_prose');
   const [preserveStructure, setPreserveStructure] = useState(true);
 
   // Author Intent & Advanced Voice state
   const [showIntentDrawer, setShowIntentDrawer] = useState(false);
   const [userIntent, setUserIntent] = useState('');
   const [protectedTermsInput, setProtectedTermsInput] = useState('');
-  const [promptVersion, setPromptVersion] = useState<PromptVersion>('v2');
+  const [formality, setFormality] = useState<FormalityLevel>('neutral');
+  const [directness, setDirectness] = useState<DirectnessLevel>('balanced');
+  const [conciseness, setConciseness] = useState<ConcisenessLevel>('balanced');
+  const [technicalDepth, setTechnicalDepth] = useState<TechnicalDepthLevel>('general');
+  const [promptVersion, setPromptVersion] = useState<PromptVersion>('v3');
 
-  // Output state
+  // Output & Comparison state
   const [result, setResult] = useState<HumanizeResponse | null>(null);
   const [editedResult, setEditedResult] = useState('');
+  const [viewMode, setViewMode] = useState<'edit' | 'compare'>('edit');
 
-  // UI & Feedback state
+  // Feedback state
+  const [feedbackRating, setFeedbackRating] = useState<number | null>(null);
+  const [feedbackCategory, setFeedbackCategory] = useState<FeedbackCategory>('good_result');
+  const [feedbackComment, setFeedbackComment] = useState('');
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+
+  // UI state
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [feedbackRating, setFeedbackRating] = useState<number | null>(null);
 
   const abortRef = useRef<AbortController | null>(null);
 
@@ -87,6 +133,8 @@ export function EditorPage() {
     setResult(null);
     setEditedResult('');
     setFeedbackRating(null);
+    setShowFeedbackModal(false);
+    setFeedbackSubmitted(false);
 
     abortRef.current = new AbortController();
 
@@ -96,6 +144,13 @@ export function EditorPage() {
       .map((t) => t.trim())
       .filter((t) => t.length > 0);
 
+    const voicePreferences: VoicePreferences = {
+      formality,
+      directness,
+      conciseness,
+      technicalDepth,
+    };
+
     try {
       const response = await humanizeText(
         {
@@ -103,9 +158,11 @@ export function EditorPage() {
           tone,
           audience,
           strength,
+          documentType,
+          voicePreferences,
           preserveStructure,
           userIntent: userIntent.trim() || undefined,
-          protectedTerms: protectedTerms,
+          protectedTerms: protectedTerms.length > 0 ? protectedTerms : undefined,
           promptVersion,
         },
         abortRef.current.signal
@@ -113,9 +170,10 @@ export function EditorPage() {
 
       setResult(response);
       setEditedResult(response.rewrittenText);
+      setViewMode('edit');
 
       if (response.warnings.length > 0) {
-        toast.warning('Rewrite complete with items to review.');
+        toast.warning(`Rewrite complete with ${response.warnings.length} items to review.`);
       } else {
         toast.success('Rewrite complete.');
       }
@@ -139,7 +197,22 @@ export function EditorPage() {
       setLoading(false);
       abortRef.current = null;
     }
-  }, [canSubmit, sourceText, tone, audience, strength, preserveStructure, userIntent, protectedTermsInput, promptVersion]);
+  }, [
+    canSubmit,
+    sourceText,
+    tone,
+    audience,
+    strength,
+    documentType,
+    formality,
+    directness,
+    conciseness,
+    technicalDepth,
+    preserveStructure,
+    userIntent,
+    protectedTermsInput,
+    promptVersion,
+  ]);
 
   const handleCancel = () => {
     abortRef.current?.abort();
@@ -165,19 +238,28 @@ export function EditorPage() {
     setEditedResult('');
     setError(null);
     setFeedbackRating(null);
+    setShowFeedbackModal(false);
   };
 
-  const handleFeedback = async (rating: number) => {
+  const handleStarClick = (rating: number) => {
     setFeedbackRating(rating);
+    setShowFeedbackModal(true);
+    setFeedbackCategory(rating >= 4 ? 'good_result' : 'awkward_result');
+  };
+
+  const handleSubmitFeedback = async () => {
+    if (!feedbackRating) return;
     try {
       await submitFeedback({
-        rating,
-        category: 'quality',
-        comment: `User rated rewrite ${rating}/5 stars using prompt ${promptVersion}`,
+        rating: feedbackRating,
+        category: feedbackCategory,
+        comment: feedbackComment.trim() || undefined,
       });
+      setFeedbackSubmitted(true);
+      setShowFeedbackModal(false);
       toast.success('Thank you for your feedback!');
     } catch {
-      // Ignored
+      toast.error('Could not submit feedback.');
     }
   };
 
@@ -187,9 +269,9 @@ export function EditorPage() {
         <div className="page-container">
           <div className="editor-header-inner">
             <div>
-              <h1 className="editor-title">Editor</h1>
+              <h1 className="editor-title">Humanly V3 Editor</h1>
               <p className="editor-subtitle">
-                Paste your text, customize your style and intent, and receive an authentic human rewrite.
+                Research-informed prose refinement with document context, voice control, and strict content preservation.
               </p>
             </div>
             {!user && (
@@ -207,6 +289,26 @@ export function EditorPage() {
       <div className="editor-body page-container">
         {/* Primary Controls */}
         <div className="editor-controls">
+          <div className="control-group">
+            <label htmlFor="doc-type-select" className="label">
+              Document Type
+            </label>
+            <select
+              id="doc-type-select"
+              className="select"
+              value={documentType}
+              onChange={(e) => setDocumentType(e.target.value as DocumentType)}
+              disabled={loading}
+            >
+              {DOCUMENT_TYPES.map((d) => (
+                <option key={d} value={d}>
+                  {DOCUMENT_TYPE_LABELS[d]}
+                </option>
+              ))}
+            </select>
+            <span className="help-text">{DOCUMENT_TYPE_DESCRIPTIONS[documentType]}</span>
+          </div>
+
           <div className="control-group">
             <label htmlFor="tone-select" className="label">
               Tone &amp; Voice
@@ -291,32 +393,111 @@ export function EditorPage() {
           onClick={() => setShowIntentDrawer(!showIntentDrawer)}
         >
           <SlidersHorizontal size={14} />
-          <span>Author intent &amp; key terms</span>
+          <span>Voice preferences &amp; author intent</span>
           {showIntentDrawer ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
         </button>
 
         {showIntentDrawer && (
           <div className="intent-card">
+            {/* Fine-grained Voice Preferences */}
+            <div className="voice-prefs-grid" style={{ gridColumn: '1 / -1' }}>
+              <div className="control-group">
+                <label htmlFor="formality-select" className="label">
+                  Formality
+                </label>
+                <select
+                  id="formality-select"
+                  className="select"
+                  value={formality}
+                  onChange={(e) => setFormality(e.target.value as FormalityLevel)}
+                  disabled={loading}
+                >
+                  {FORMALITY_LEVELS.map((f) => (
+                    <option key={f} value={f}>
+                      {f.charAt(0).toUpperCase() + f.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="control-group">
+                <label htmlFor="directness-select" className="label">
+                  Directness
+                </label>
+                <select
+                  id="directness-select"
+                  className="select"
+                  value={directness}
+                  onChange={(e) => setDirectness(e.target.value as DirectnessLevel)}
+                  disabled={loading}
+                >
+                  {DIRECTNESS_LEVELS.map((d) => (
+                    <option key={d} value={d}>
+                      {d.charAt(0).toUpperCase() + d.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="control-group">
+                <label htmlFor="conciseness-select" className="label">
+                  Conciseness
+                </label>
+                <select
+                  id="conciseness-select"
+                  className="select"
+                  value={conciseness}
+                  onChange={(e) => setConciseness(e.target.value as ConcisenessLevel)}
+                  disabled={loading}
+                >
+                  {CONCISENESS_LEVELS.map((c) => (
+                    <option key={c} value={c}>
+                      {c.charAt(0).toUpperCase() + c.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="control-group">
+                <label htmlFor="tech-depth-select" className="label">
+                  Technical Depth
+                </label>
+                <select
+                  id="tech-depth-select"
+                  className="select"
+                  value={technicalDepth}
+                  onChange={(e) => setTechnicalDepth(e.target.value as TechnicalDepthLevel)}
+                  disabled={loading}
+                >
+                  {TECHNICAL_DEPTH_LEVELS.map((t) => (
+                    <option key={t} value={t}>
+                      {t.charAt(0).toUpperCase() + t.slice(1)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
             <div>
               <label htmlFor="user-intent-input" className="label">
-                What do you want this passage to communicate?
+                What is the author's communicative goal?
               </label>
               <input
                 id="user-intent-input"
                 type="text"
                 className="intent-input"
-                placeholder="e.g. Convince senior executives without defensive language"
+                placeholder="e.g. Explain connection pooling for a technical audience"
                 value={userIntent}
                 onChange={(e) => setUserIntent(e.target.value)}
                 disabled={loading}
                 maxLength={500}
               />
-              <span className="help-text">Guides the rewrite to reflect your exact perspective.</span>
+              <span className="help-text">Guides editorial priorities without altering core facts.</span>
             </div>
 
             <div>
               <label htmlFor="protected-terms-input" className="label">
-                Terms / Keywords to preserve (comma separated)
+                Protected terms / identifiers (comma separated)
               </label>
               <input
                 id="protected-terms-input"
@@ -327,15 +508,38 @@ export function EditorPage() {
                 onChange={(e) => setProtectedTermsInput(e.target.value)}
                 disabled={loading}
               />
-              <span className="help-text">These words will remain unaltered in the final output.</span>
+              <span className="help-text">Preserves exact technical names and identifiers verbatim.</span>
             </div>
 
-            <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--color-border-subtle)', paddingTop: 'var(--space-3)' }}>
+            <div
+              style={{
+                gridColumn: '1 / -1',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                borderTop: '1px solid var(--color-border-subtle)',
+                paddingTop: 'var(--space-3)',
+                flexWrap: 'wrap',
+                gap: 'var(--space-2)',
+              }}
+            >
               <div>
-                <span className="label" style={{ marginBottom: 2 }}>Editing Engine Version</span>
-                <span className="help-text">v2 features syntax de-robotification & cadence overhaul. v1 is the legacy baseline.</span>
+                <span className="label" style={{ marginBottom: 2 }}>
+                  Engine Version
+                </span>
+                <span className="help-text">
+                  v3 features placeholder-based entity protection &amp; research-informed editorial control.
+                </span>
               </div>
               <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                <button
+                  type="button"
+                  className={`btn btn-sm ${promptVersion === 'v3' ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => setPromptVersion('v3')}
+                >
+                  <Sparkles size={13} style={{ marginRight: 4 }} />
+                  v3 (Editorial Engine)
+                </button>
                 <button
                   type="button"
                   className={`btn btn-sm ${promptVersion === 'v2' ? 'btn-primary' : 'btn-secondary'}`}
@@ -422,14 +626,43 @@ export function EditorPage() {
             <div className="panel-header">
               <div className="panel-label panel-label-revised">
                 <span>Revised</span>
-                {result && <span className="panel-badge">Editable</span>}
+                {result && <span className="panel-badge">{promptVersion.toUpperCase()}</span>}
+                {result && (
+                  <div className="view-mode-toggle">
+                    <button
+                      type="button"
+                      className={`view-mode-btn ${viewMode === 'edit' ? 'view-mode-active' : ''}`}
+                      onClick={() => setViewMode('edit')}
+                      title="Editable text view"
+                    >
+                      <FileEdit size={12} />
+                      <span>Edit</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`view-mode-btn ${viewMode === 'compare' ? 'view-mode-active' : ''}`}
+                      onClick={() => setViewMode('compare')}
+                      title="Comparison view"
+                    >
+                      <Columns size={12} />
+                      <span>Compare</span>
+                    </button>
+                  </div>
+                )}
               </div>
               <div className="panel-meta">
                 {result && result.metadata.durationMs && (
                   <span>{(result.metadata.durationMs / 1000).toFixed(1)}s</span>
                 )}
                 {resultText && (
-                  <span className="panel-wordcount">{resultWordCount} words</span>
+                  <span className="panel-wordcount">
+                    {resultWordCount} words
+                    {result && (
+                      <span className="word-delta">
+                        ({resultWordCount - wordCount >= 0 ? `+${resultWordCount - wordCount}` : resultWordCount - wordCount})
+                      </span>
+                    )}
+                  </span>
                 )}
               </div>
             </div>
@@ -437,16 +670,29 @@ export function EditorPage() {
             {loading ? (
               <div className="editor-loading">
                 <Loader2 size={24} className="spinning" />
-                <span>Crafting natural human flow...</span>
+                <span>Applying research-informed editorial polish...</span>
               </div>
             ) : result ? (
-              <textarea
-                className="editor-textarea editor-textarea-result"
-                value={editedResult}
-                onChange={(e) => setEditedResult(e.target.value)}
-                aria-label="Revised text"
-                rows={12}
-              />
+              viewMode === 'compare' ? (
+                <div className="comparison-view">
+                  <div className="comparison-col">
+                    <div className="comparison-header">Original</div>
+                    <div className="comparison-text">{sourceText}</div>
+                  </div>
+                  <div className="comparison-col">
+                    <div className="comparison-header">Revised</div>
+                    <div className="comparison-text comparison-text-revised">{resultText}</div>
+                  </div>
+                </div>
+              ) : (
+                <textarea
+                  className="editor-textarea editor-textarea-result"
+                  value={editedResult}
+                  onChange={(e) => setEditedResult(e.target.value)}
+                  aria-label="Revised text"
+                  rows={12}
+                />
+              )
             ) : (
               <div className="editor-empty">
                 <MessageSquare size={24} strokeWidth={1.5} />
@@ -476,7 +722,7 @@ export function EditorPage() {
                   </button>
                 </div>
 
-                {/* Rating widget */}
+                {/* Rating & Feedback Trigger */}
                 <div className="feedback-widget">
                   <span>Quality:</span>
                   {[1, 2, 3, 4, 5].map((star) => (
@@ -484,17 +730,75 @@ export function EditorPage() {
                       key={star}
                       type="button"
                       className={`star-btn ${(feedbackRating || 0) >= star ? 'star-btn-active' : ''}`}
-                      onClick={() => handleFeedback(star)}
+                      onClick={() => handleStarClick(star)}
                       aria-label={`Rate ${star} stars`}
                     >
                       <Star size={14} fill={(feedbackRating || 0) >= star ? 'currentColor' : 'none'} />
                     </button>
                   ))}
+                  {feedbackSubmitted && <span className="feedback-done-badge">Saved</span>}
                 </div>
               </div>
             )}
           </div>
         </div>
+
+        {/* Feedback Categorization Modal */}
+        {showFeedbackModal && (
+          <div className="feedback-modal-overlay">
+            <div className="feedback-modal-card">
+              <h3 className="feedback-modal-title">Help us improve the editorial engine</h3>
+              <p className="feedback-modal-desc">
+                You rated this rewrite {feedbackRating} / 5 stars. What best describes your assessment?
+              </p>
+
+              <div className="feedback-category-group">
+                {FEEDBACK_CATEGORIES.map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    className={`category-pill ${feedbackCategory === cat ? 'category-pill-active' : ''}`}
+                    onClick={() => setFeedbackCategory(cat)}
+                  >
+                    {FEEDBACK_CATEGORY_LABELS[cat]}
+                  </button>
+                ))}
+              </div>
+
+              <div style={{ marginTop: 'var(--space-3)' }}>
+                <label htmlFor="feedback-comment" className="label">
+                  Optional notes (never logs source or rewritten draft)
+                </label>
+                <input
+                  id="feedback-comment"
+                  type="text"
+                  className="intent-input"
+                  placeholder="e.g. Preserved citations well, but tone was slightly informal"
+                  value={feedbackComment}
+                  onChange={(e) => setFeedbackComment(e.target.value)}
+                  maxLength={500}
+                />
+              </div>
+
+              <div className="feedback-modal-actions">
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setShowFeedbackModal(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={handleSubmitFeedback}
+                >
+                  Submit Feedback
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Error Banner with Retry */}
         {error && (

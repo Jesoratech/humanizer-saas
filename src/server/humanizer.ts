@@ -4,7 +4,7 @@ import type {
 } from '../shared/schemas.ts';
 import { countWords } from '../shared/schemas.ts';
 import { getPromptEngine } from './prompts/index.ts';
-import { validateRewrite } from './validator.ts';
+import { validateRewrite, extractProtectedEntities } from './validator.ts';
 import { logDiagnostic } from './logger.ts';
 
 interface HumanizerOptions {
@@ -81,9 +81,21 @@ export async function executeHumanize(
 ): Promise<HumanizeResponse> {
   const startTime = performance.now();
   const model = options.model || 'gemini-3.5-flash-lite';
-  const promptVersion = request.promptVersion || 'v2';
+  const promptVersion = request.promptVersion || 'v3';
   const engine = getPromptEngine(promptVersion);
-  const promptConfig = engine.build(request);
+
+  // Stage D: Placeholder Extraction (active in v3)
+  const shouldExtractPlaceholders = promptVersion === 'v3';
+  const { processedText, entities } = shouldExtractPlaceholders
+    ? extractProtectedEntities(request.text)
+    : { processedText: request.text, entities: [] };
+
+  const promptRequest: HumanizeRequest = {
+    ...request,
+    text: processedText,
+  };
+
+  const promptConfig = engine.build(promptRequest);
   const requestId = 'req_' + Math.random().toString(36).substring(2, 11);
   const inputWords = countWords(request.text);
 
@@ -91,10 +103,15 @@ export async function executeHumanize(
 
   let retryCount = 0;
   let rawText = '';
-  let finalValidation = validateRewrite(request.text, '', {
-    protectedTerms: request.protectedTerms,
-    preserveStructure: request.preserveStructure,
-  });
+  let finalValidation = validateRewrite(
+    request.text,
+    '',
+    {
+      protectedTerms: request.protectedTerms,
+      preserveStructure: request.preserveStructure,
+    },
+    entities
+  );
 
   try {
     // Primary inference attempt
@@ -106,10 +123,15 @@ export async function executeHumanize(
       promptConfig.topP
     );
 
-    finalValidation = validateRewrite(request.text, rawText, {
-      protectedTerms: request.protectedTerms,
-      preserveStructure: request.preserveStructure,
-    });
+    finalValidation = validateRewrite(
+      request.text,
+      rawText,
+      {
+        protectedTerms: request.protectedTerms,
+        preserveStructure: request.preserveStructure,
+      },
+      entities
+    );
 
     // Bounded auto-retry (strictly max 1 attempt for objective dropped URLs or empty response)
     if (finalValidation.needsRetry && (options.maxRetries ?? 1) > 0) {
@@ -127,10 +149,15 @@ export async function executeHumanize(
         promptConfig.topP
       );
 
-      const retryValidation = validateRewrite(request.text, retryRaw, {
-        protectedTerms: request.protectedTerms,
-        preserveStructure: request.preserveStructure,
-      });
+      const retryValidation = validateRewrite(
+        request.text,
+        retryRaw,
+        {
+          protectedTerms: request.protectedTerms,
+          preserveStructure: request.preserveStructure,
+        },
+        entities
+      );
 
       // Keep retry result if valid
       if (retryValidation.isValid) {
@@ -173,8 +200,13 @@ export async function executeHumanize(
         tone: request.tone,
         strength: request.strength,
         audience: request.audience,
+        documentType: request.documentType || 'general_prose',
+        voicePreferences: request.voicePreferences,
         durationMs: Math.round(durationMs),
-        preservedEntitiesCount: (request.protectedTerms?.length || 0) - finalValidation.missingProtectedTerms.length,
+        preservedEntitiesCount:
+          (request.protectedTerms?.length || 0) -
+          finalValidation.missingProtectedTerms.length +
+          finalValidation.restoredEntitiesCount,
         flaggedEntitiesCount: finalValidation.warnings.length,
       },
     };

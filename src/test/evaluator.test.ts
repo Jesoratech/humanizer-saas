@@ -1,10 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import { EVALUATION_CORPUS } from './evaluation-corpus.ts';
-import { promptEngineV2 } from '../server/prompts/v2.ts';
-import { validateRewrite } from '../server/validator.ts';
+import { promptEngineV3 } from '../server/prompts/v3.ts';
+import {
+  validateRewrite,
+  extractProtectedEntities,
+  restoreProtectedEntities,
+} from '../server/validator.ts';
 import { countWords } from '../shared/schemas.ts';
 
-describe('100-Passage Quality Benchmark Suite', () => {
+describe('100-Passage Quality Benchmark Suite (Humanly V3)', () => {
   it('contains exactly 100 diverse, versioned samples across 10 categories', () => {
     expect(EVALUATION_CORPUS.length).toBe(100);
 
@@ -17,13 +21,14 @@ describe('100-Passage Quality Benchmark Suite', () => {
     }
   });
 
-  it('generates well-formed prompt configurations for every sample in the corpus', () => {
+  it('generates well-formed v3 prompt configurations for every sample in the corpus', () => {
     for (const sample of EVALUATION_CORPUS) {
-      const config = promptEngineV2.build({
+      const config = promptEngineV3.build({
         text: sample.sourceText,
         tone: sample.intendedTone,
         audience: sample.intendedAudience,
         strength: sample.intendedStrength,
+        documentType: 'general_prose',
         preserveStructure: true,
         userIntent: sample.userIntent,
         protectedTerms: sample.protectedTerms,
@@ -36,34 +41,39 @@ describe('100-Passage Quality Benchmark Suite', () => {
     }
   });
 
-  it('validates meaning and entity preservation across all 10 URL samples', () => {
+  it('runs placeholder extraction and restoration across all 10 URL samples', () => {
     const urlSamples = EVALUATION_CORPUS.filter((s) => s.category === 'with_urls');
     expect(urlSamples.length).toBe(10);
 
     for (const sample of urlSamples) {
-      // Mock rewrite preserving URL
-      const mockRewrite = `Here is the revised draft. ${sample.sourceText}`;
-      const res = validateRewrite(sample.sourceText, mockRewrite);
-      expect(res.isValid).toBe(true);
-      expect(res.droppedUrls.length).toBe(0);
+      const { entities } = extractProtectedEntities(sample.sourceText);
+      expect(entities.length).toBeGreaterThan(0);
 
-      // Verify that dropping the URL would be detected
-      const strippedRewrite = sample.sourceText.replace(/https?:\/\/[^\s]+/g, '[link]');
-      const dropRes = validateRewrite(sample.sourceText, strippedRewrite);
-      expect(dropRes.droppedUrls.length).toBeGreaterThan(0);
+      // Model edits surrounding prose and keeps placeholders
+      const simulatedRewrite = `Refined prose keeping ${entities.map((e) => e.placeholder).join(' and ')}.`;
+      const restored = restoreProtectedEntities(simulatedRewrite, entities);
+
+      expect(restored.restoredCount).toBe(entities.length);
+      for (const ent of entities) {
+        expect(restored.restoredText).toContain(ent.original);
+      }
     }
   });
 
-  it('validates citation preservation across all 10 citation samples', () => {
+  it('runs placeholder extraction and restoration across all 10 citation samples', () => {
     const citeSamples = EVALUATION_CORPUS.filter((s) => s.category === 'with_citations');
     expect(citeSamples.length).toBe(10);
 
     for (const sample of citeSamples) {
-      if (sample.expectedPreservedEntities) {
-        // Test that dropping citation triggers detection
-        const brokenRewrite = 'A rewritten sentence without the scholarly citations.';
-        const res = validateRewrite(sample.sourceText, brokenRewrite);
-        expect(res.warnings.length).toBeGreaterThan(0);
+      const { processedText, entities } = extractProtectedEntities(sample.sourceText);
+      if (entities.length > 0) {
+        // Placeholders replace citations in processed text
+        for (const ent of entities) {
+          expect(processedText).toContain(ent.placeholder);
+        }
+        // Roundtrip restoration
+        const restored = restoreProtectedEntities(processedText, entities);
+        expect(restored.restoredText).toBe(sample.sourceText);
       }
     }
   });
@@ -81,7 +91,7 @@ describe('100-Passage Quality Benchmark Suite', () => {
     }
   });
 
-  it('computes word counts and ratios reliably for all samples', () => {
+  it('computes word counts and ratios reliably for all 100 samples', () => {
     for (const sample of EVALUATION_CORPUS) {
       const words = countWords(sample.sourceText);
       expect(words).toBeGreaterThan(5);

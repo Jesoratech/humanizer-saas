@@ -8,6 +8,6 @@ export interface PromptConfig {
 }
 
 export interface PromptEngine {
-  version: 'v1' | 'v2';
+  version: 'v1' | 'v2' | 'v3';
   build(request: HumanizeRequest): PromptConfig;
 }

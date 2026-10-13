@@ -65,8 +65,69 @@ export const AUDIENCE_LABELS: Record<Audience, string> = {
   casual: 'Casual',
 };
 
+// ── Document Types ──
+export const DOCUMENT_TYPES = [
+  'general_prose',
+  'academic_abstract',
+  'literature_review',
+  'methodology',
+  'discussion_conclusion',
+  'professional_email',
+  'technical_doc',
+  'marketing_copy',
+  'conversational',
+] as const;
+
+export type DocumentType = (typeof DOCUMENT_TYPES)[number];
+
+export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
+  general_prose: 'General Prose',
+  academic_abstract: 'Academic Abstract',
+  literature_review: 'Literature Review',
+  methodology: 'Methodology',
+  discussion_conclusion: 'Discussion & Conclusion',
+  professional_email: 'Professional Email',
+  technical_doc: 'Technical Documentation',
+  marketing_copy: 'Marketing Copy',
+  conversational: 'Conversational Writing',
+};
+
+export const DOCUMENT_TYPE_DESCRIPTIONS: Record<DocumentType, string> = {
+  general_prose: 'Clear exposition, balanced tone, and natural narrative cadence',
+  academic_abstract: 'Dense, scholarly summary highlighting research objective, method, and key findings',
+  literature_review: 'Critical synthesis of prior work with scholarly attribution and contextual nuance',
+  methodology: 'Rigorous procedural clarity with exact parameters, conditions, and instruments',
+  discussion_conclusion: 'Analytical interpretation of results, limitations, and implications without over-claiming',
+  professional_email: 'Polite, clear, and actionable business correspondence with defined next steps',
+  technical_doc: 'Unambiguous precision preserving exact identifiers, commands, and specifications',
+  marketing_copy: 'Persuasive, value-oriented prose highlighting benefits without hyperbole',
+  conversational: 'Warm, approachable, and relatable voice with organic human phrasing',
+};
+
+// ── Voice Preferences ──
+export const FORMALITY_LEVELS = ['informal', 'neutral', 'formal'] as const;
+export type FormalityLevel = (typeof FORMALITY_LEVELS)[number];
+
+export const DIRECTNESS_LEVELS = ['diplomatic', 'balanced', 'direct'] as const;
+export type DirectnessLevel = (typeof DIRECTNESS_LEVELS)[number];
+
+export const CONCISENESS_LEVELS = ['expansive', 'balanced', 'concise'] as const;
+export type ConcisenessLevel = (typeof CONCISENESS_LEVELS)[number];
+
+export const TECHNICAL_DEPTH_LEVELS = ['layperson', 'general', 'expert'] as const;
+export type TechnicalDepthLevel = (typeof TECHNICAL_DEPTH_LEVELS)[number];
+
+export const voicePreferencesSchema = z.object({
+  formality: z.enum(FORMALITY_LEVELS).optional(),
+  directness: z.enum(DIRECTNESS_LEVELS).optional(),
+  conciseness: z.enum(CONCISENESS_LEVELS).optional(),
+  technicalDepth: z.enum(TECHNICAL_DEPTH_LEVELS).optional(),
+});
+
+export type VoicePreferences = z.infer<typeof voicePreferencesSchema>;
+
 // ── Prompt Versions ──
-export const PROMPT_VERSIONS = ['v1', 'v2'] as const;
+export const PROMPT_VERSIONS = ['v1', 'v2', 'v3'] as const;
 export type PromptVersion = (typeof PROMPT_VERSIONS)[number];
 
 // ── Zod Schemas ──
@@ -78,6 +139,8 @@ export const humanizeRequestSchema = z.object({
   tone: z.enum(TONES),
   audience: z.enum(AUDIENCES),
   strength: z.enum(STRENGTHS),
+  documentType: z.enum(DOCUMENT_TYPES).optional().default('general_prose'),
+  voicePreferences: voicePreferencesSchema.optional(),
   preserveStructure: z.boolean().default(true),
   userIntent: z
     .string()
@@ -87,10 +150,11 @@ export const humanizeRequestSchema = z.object({
     .array(z.string().max(100))
     .max(30, 'Maximum 30 protected terms')
     .optional(),
-  promptVersion: z.enum(PROMPT_VERSIONS).optional(),
+  promptVersion: z.enum(PROMPT_VERSIONS).optional().default('v3'),
 });
 
-export type HumanizeRequest = z.infer<typeof humanizeRequestSchema>;
+export type HumanizeRequest = z.input<typeof humanizeRequestSchema>;
+export type HumanizeRequestParsed = z.infer<typeof humanizeRequestSchema>;
 
 export interface HumanizeResponse {
   rewrittenText: string;
@@ -104,6 +168,8 @@ export interface HumanizeResponse {
     tone: Tone;
     strength: Strength;
     audience: Audience;
+    documentType?: DocumentType;
+    voicePreferences?: VoicePreferences;
     durationMs?: number;
     preservedEntitiesCount?: number;
     flaggedEntitiesCount?: number;
@@ -126,16 +192,27 @@ export interface ApiError {
   details?: string;
 }
 
+export const FEEDBACK_CATEGORIES = [
+  'meaning_changed',
+  'too_formal',
+  'too_casual',
+  'too_verbose',
+  'unclear_wording',
+  'awkward_result',
+  'good_result',
+  'quality',
+  'accuracy',
+  'tone',
+  'speed',
+  'ui',
+  'other',
+] as const;
+
+export type FeedbackCategory = (typeof FEEDBACK_CATEGORIES)[number];
+
 export const feedbackSchema = z.object({
   rating: z.number().min(1).max(5),
-  category: z.enum([
-    'quality',
-    'accuracy',
-    'tone',
-    'speed',
-    'ui',
-    'other',
-  ]),
+  category: z.enum(FEEDBACK_CATEGORIES),
   comment: z
     .string()
     .max(500, 'Comment must be 500 characters or less')

@@ -1,6 +1,6 @@
 import type { Plugin, ViteDevServer } from 'vite';
 import { loadEnv } from 'vite';
-import { humanizeRequestSchema, countWords } from '../shared/schemas.ts';
+import { humanizeRequestSchema, feedbackSchema, countWords } from '../shared/schemas.ts';
 import { executeHumanize } from './humanizer.ts';
 import { hashIp, checkAndIncrementUsage, getCurrentUsage } from './rate-limiter.ts';
 import type { IncomingMessage, ServerResponse } from 'http';
@@ -88,7 +88,15 @@ export function devApiPlugin(): Plugin {
         // 3. Feedback endpoint
         if (url === '/api/v1/feedback' && req.method === 'POST') {
           try {
-            await parseJsonBody(req);
+            const body = await parseJsonBody(req);
+            const parsed = feedbackSchema.safeParse(body);
+            if (!parsed.success) {
+              const errorDetails = parsed.error.errors.map((e) => e.message).join(', ');
+              return sendJson(res, 400, {
+                error: `Validation error: ${errorDetails}`,
+                code: 'VALIDATION_ERROR',
+              });
+            }
             return sendJson(res, 200, { success: true, message: 'Thank you for your feedback!' });
           } catch {
             return sendJson(res, 400, { error: 'Invalid JSON', code: 'BAD_REQUEST' });
