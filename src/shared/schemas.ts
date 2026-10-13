@@ -65,6 +65,10 @@ export const AUDIENCE_LABELS: Record<Audience, string> = {
   casual: 'Casual',
 };
 
+// ── Prompt Versions ──
+export const PROMPT_VERSIONS = ['v1', 'v2'] as const;
+export type PromptVersion = (typeof PROMPT_VERSIONS)[number];
+
 // ── Zod Schemas ──
 export const humanizeRequestSchema = z.object({
   text: z
@@ -75,6 +79,15 @@ export const humanizeRequestSchema = z.object({
   audience: z.enum(AUDIENCES),
   strength: z.enum(STRENGTHS),
   preserveStructure: z.boolean().default(true),
+  userIntent: z
+    .string()
+    .max(500, 'Intent description must be 500 characters or less')
+    .optional(),
+  protectedTerms: z
+    .array(z.string().max(100))
+    .max(30, 'Maximum 30 protected terms')
+    .optional(),
+  promptVersion: z.enum(PROMPT_VERSIONS).optional(),
 });
 
 export type HumanizeRequest = z.infer<typeof humanizeRequestSchema>;
@@ -83,6 +96,7 @@ export interface HumanizeResponse {
   rewrittenText: string;
   provider: string;
   requestId: string;
+  promptVersion: PromptVersion;
   warnings: string[];
   metadata: {
     originalWordCount: number;
@@ -90,6 +104,9 @@ export interface HumanizeResponse {
     tone: Tone;
     strength: Strength;
     audience: Audience;
+    durationMs?: number;
+    preservedEntitiesCount?: number;
+    flaggedEntitiesCount?: number;
   };
 }
 

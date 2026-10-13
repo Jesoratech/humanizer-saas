@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { humanizeText, ApiClientError } from '../client/api';
+import { humanizeText, submitFeedback, ApiClientError } from '../client/api';
 import {
   countWords,
   countCharacters,
@@ -16,6 +16,7 @@ import {
   type Tone,
   type Strength,
   type Audience,
+  type PromptVersion,
   type HumanizeResponse,
 } from '../shared/schemas';
 import {
@@ -30,6 +31,11 @@ import {
   Info,
   ToggleLeft,
   ToggleRight,
+  SlidersHorizontal,
+  ChevronDown,
+  ChevronUp,
+  Star,
+  ShieldAlert,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -45,14 +51,21 @@ export function EditorPage() {
   const [audience, setAudience] = useState<Audience>('general');
   const [preserveStructure, setPreserveStructure] = useState(true);
 
+  // Author Intent & Advanced Voice state
+  const [showIntentDrawer, setShowIntentDrawer] = useState(false);
+  const [userIntent, setUserIntent] = useState('');
+  const [protectedTermsInput, setProtectedTermsInput] = useState('');
+  const [promptVersion, setPromptVersion] = useState<PromptVersion>('v2');
+
   // Output state
   const [result, setResult] = useState<HumanizeResponse | null>(null);
   const [editedResult, setEditedResult] = useState('');
 
-  // UI state
+  // UI & Feedback state
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [feedbackRating, setFeedbackRating] = useState<number | null>(null);
 
   const abortRef = useRef<AbortController | null>(null);
 
@@ -73,8 +86,15 @@ export function EditorPage() {
     setLoading(true);
     setResult(null);
     setEditedResult('');
+    setFeedbackRating(null);
 
     abortRef.current = new AbortController();
+
+    // Parse comma-separated protected terms
+    const protectedTerms = protectedTermsInput
+      .split(',')
+      .map((t) => t.trim())
+      .filter((t) => t.length > 0);
 
     try {
       const response = await humanizeText(
@@ -84,6 +104,9 @@ export function EditorPage() {
           audience,
           strength,
           preserveStructure,
+          userIntent: userIntent.trim() || undefined,
+          protectedTerms: protectedTerms,
+          promptVersion,
         },
         abortRef.current.signal
       );
@@ -92,20 +115,18 @@ export function EditorPage() {
       setEditedResult(response.rewrittenText);
 
       if (response.warnings.length > 0) {
-        response.warnings.forEach((w) => toast.warning(w));
+        toast.warning('Rewrite complete with items to review.');
+      } else {
+        toast.success('Rewrite complete.');
       }
     } catch (err) {
       if (err instanceof ApiClientError) {
         if (err.status === 429) {
-          setError(
-            'Daily limit reached. Your rewrites reset at midnight UTC.'
-          );
+          setError('Daily limit reached. Your rewrites reset at midnight UTC.');
         } else if (err.status === 401) {
           setError('Please sign in to use the editor.');
         } else if (err.status === 503 || err.status === 502) {
-          setError(
-            'The writing service is temporarily unavailable. Please try again in a few minutes.'
-          );
+          setError('The writing service is temporarily unavailable. Please try again.');
         } else {
           setError(err.message);
         }
@@ -118,7 +139,7 @@ export function EditorPage() {
       setLoading(false);
       abortRef.current = null;
     }
-  }, [canSubmit, sourceText, tone, audience, strength, preserveStructure]);
+  }, [canSubmit, sourceText, tone, audience, strength, preserveStructure, userIntent, protectedTermsInput, promptVersion]);
 
   const handleCancel = () => {
     abortRef.current?.abort();
@@ -143,10 +164,21 @@ export function EditorPage() {
     setResult(null);
     setEditedResult('');
     setError(null);
+    setFeedbackRating(null);
   };
 
-  const handleRewriteAgain = () => {
-    handleSubmit();
+  const handleFeedback = async (rating: number) => {
+    setFeedbackRating(rating);
+    try {
+      await submitFeedback({
+        rating,
+        category: 'quality',
+        comment: `User rated rewrite ${rating}/5 stars using prompt ${promptVersion}`,
+      });
+      toast.success('Thank you for your feedback!');
+    } catch {
+      // Ignored
+    }
   };
 
   return (
@@ -157,15 +189,14 @@ export function EditorPage() {
             <div>
               <h1 className="editor-title">Editor</h1>
               <p className="editor-subtitle">
-                Paste your text, choose your style, and get a clearer version.
+                Paste your text, customize your style and intent, and receive an authentic human rewrite.
               </p>
             </div>
             {!user && (
               <div className="editor-auth-prompt">
                 <Info size={14} />
                 <span>
-                  <Link to="/auth/signin">Sign in</Link> to save your usage
-                  and get 3 free rewrites daily.
+                  <Link to="/auth/signin">Sign in</Link> to save your usage and receive free daily rewrites.
                 </span>
               </div>
             )}
@@ -174,11 +205,11 @@ export function EditorPage() {
       </div>
 
       <div className="editor-body page-container">
-        {/* Controls */}
+        {/* Primary Controls */}
         <div className="editor-controls">
           <div className="control-group">
             <label htmlFor="tone-select" className="label">
-              Writing style
+              Tone &amp; Voice
             </label>
             <select
               id="tone-select"
@@ -247,22 +278,91 @@ export function EditorPage() {
                 <ToggleLeft size={20} className="toggle-off" />
               )}
               <span className="label" style={{ marginBottom: 0 }}>
-                Preserve structure
+                Preserve paragraphs
               </span>
             </button>
           </div>
         </div>
 
-        {/* Panels */}
+        {/* Expandable Voice & Intent Drawer */}
+        <button
+          type="button"
+          className="intent-toggle-btn"
+          onClick={() => setShowIntentDrawer(!showIntentDrawer)}
+        >
+          <SlidersHorizontal size={14} />
+          <span>Author intent &amp; key terms</span>
+          {showIntentDrawer ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+        </button>
+
+        {showIntentDrawer && (
+          <div className="intent-card">
+            <div>
+              <label htmlFor="user-intent-input" className="label">
+                What do you want this passage to communicate?
+              </label>
+              <input
+                id="user-intent-input"
+                type="text"
+                className="intent-input"
+                placeholder="e.g. Convince senior executives without defensive language"
+                value={userIntent}
+                onChange={(e) => setUserIntent(e.target.value)}
+                disabled={loading}
+                maxLength={500}
+              />
+              <span className="help-text">Guides the rewrite to reflect your exact perspective.</span>
+            </div>
+
+            <div>
+              <label htmlFor="protected-terms-input" className="label">
+                Terms / Keywords to preserve (comma separated)
+              </label>
+              <input
+                id="protected-terms-input"
+                type="text"
+                className="intent-input"
+                placeholder="e.g. PostgreSQL, RLS, GDPR, Q3 2026"
+                value={protectedTermsInput}
+                onChange={(e) => setProtectedTermsInput(e.target.value)}
+                disabled={loading}
+              />
+              <span className="help-text">These words will remain unaltered in the final output.</span>
+            </div>
+
+            <div style={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--color-border-subtle)', paddingTop: 'var(--space-3)' }}>
+              <div>
+                <span className="label" style={{ marginBottom: 2 }}>Editing Engine Version</span>
+                <span className="help-text">v2 features syntax de-robotification & cadence overhaul. v1 is the legacy baseline.</span>
+              </div>
+              <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                <button
+                  type="button"
+                  className={`btn btn-sm ${promptVersion === 'v2' ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => setPromptVersion('v2')}
+                >
+                  v2 (Natural Flow)
+                </button>
+                <button
+                  type="button"
+                  className={`btn btn-sm ${promptVersion === 'v1' ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => setPromptVersion('v1')}
+                >
+                  v1 (Baseline)
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Dual Panels */}
         <div className="editor-panels">
           {/* Source Panel */}
           <div className="editor-panel">
             <div className="panel-header">
-              <span className="panel-label">Original</span>
+              <span className="panel-label">Original Draft</span>
               <div className="panel-meta">
-                <span
-                  className={`panel-wordcount ${isOverLimit ? 'panel-wordcount-over' : ''}`}
-                >
+                <span className={`panel-wordcount ${isOverLimit ? 'panel-wordcount-over' : ''}`}>
                   {wordCount} / {maxWords} words
                 </span>
                 <span className="panel-charcount">{charCount} chars</span>
@@ -270,7 +370,7 @@ export function EditorPage() {
             </div>
             <textarea
               className="editor-textarea"
-              placeholder="Paste or type your text here..."
+              placeholder="Paste or type your draft text here..."
               value={sourceText}
               onChange={(e) => setSourceText(e.target.value)}
               disabled={loading}
@@ -288,14 +388,12 @@ export function EditorPage() {
                 Clear
               </button>
               {isOverLimit && (
-                <span className="error-text">
-                  Please reduce to {maxWords} words or fewer
-                </span>
+                <span className="error-text">Please reduce to {maxWords} words or fewer</span>
               )}
             </div>
           </div>
 
-          {/* Submit button (centered between panels) */}
+          {/* Submit Action (Centered between panels) */}
           <div className="editor-submit-area">
             {loading ? (
               <button
@@ -313,23 +411,25 @@ export function EditorPage() {
                 disabled={!canSubmit}
                 type="button"
               >
-                Humanize
+                <span>Humanize</span>
                 <ArrowRight size={18} />
               </button>
             )}
           </div>
 
-          {/* Result Panel */}
+          {/* Revised Panel */}
           <div className="editor-panel">
             <div className="panel-header">
-              <span className="panel-label panel-label-revised">
-                Revised
-              </span>
+              <div className="panel-label panel-label-revised">
+                <span>Revised</span>
+                {result && <span className="panel-badge">Editable</span>}
+              </div>
               <div className="panel-meta">
+                {result && result.metadata.durationMs && (
+                  <span>{(result.metadata.durationMs / 1000).toFixed(1)}s</span>
+                )}
                 {resultText && (
-                  <span className="panel-wordcount">
-                    {resultWordCount} words
-                  </span>
+                  <span className="panel-wordcount">{resultWordCount} words</span>
                 )}
               </div>
             </div>
@@ -337,7 +437,7 @@ export function EditorPage() {
             {loading ? (
               <div className="editor-loading">
                 <Loader2 size={24} className="spinning" />
-                <span>Improving your text...</span>
+                <span>Crafting natural human flow...</span>
               </div>
             ) : result ? (
               <textarea
@@ -367,7 +467,7 @@ export function EditorPage() {
                   </button>
                   <button
                     className="btn btn-ghost btn-sm"
-                    onClick={handleRewriteAgain}
+                    onClick={handleSubmit}
                     disabled={loading}
                     type="button"
                   >
@@ -375,25 +475,55 @@ export function EditorPage() {
                     Rewrite again
                   </button>
                 </div>
+
+                {/* Rating widget */}
+                <div className="feedback-widget">
+                  <span>Quality:</span>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      className={`star-btn ${(feedbackRating || 0) >= star ? 'star-btn-active' : ''}`}
+                      onClick={() => handleFeedback(star)}
+                      aria-label={`Rate ${star} stars`}
+                    >
+                      <Star size={14} fill={(feedbackRating || 0) >= star ? 'currentColor' : 'none'} />
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>
         </div>
 
-        {/* Error display */}
+        {/* Error Banner with Retry */}
         {error && (
-          <div className="editor-error" role="alert">
-            <AlertCircle size={16} />
-            <span>{error}</span>
+          <div className="editor-error-banner" role="alert">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+              <AlertCircle size={18} />
+              <span>{error}</span>
+            </div>
+            <button
+              type="button"
+              className="btn btn-sm btn-secondary"
+              onClick={handleSubmit}
+              disabled={loading || !canSubmit}
+            >
+              Try again
+            </button>
           </div>
         )}
 
-        {/* Warnings */}
+        {/* Meaning Preservation / Structural Warning Notice */}
         {result && result.warnings.length > 0 && (
-          <div className="editor-warnings">
-            {result.warnings.map((w, i) => (
-              <div key={i} className="editor-warning">
-                <AlertCircle size={14} />
+          <div className="editor-warnings-box" role="status">
+            <div className="warnings-header">
+              <ShieldAlert size={16} />
+              <span>Editorial Notice ({result.warnings.length} items to review)</span>
+            </div>
+            {result.warnings.map((w, idx) => (
+              <div key={idx} className="warning-item">
+                <AlertCircle size={13} style={{ flexShrink: 0 }} />
                 <span>{w}</span>
               </div>
             ))}
