@@ -81,7 +81,23 @@ export function devApiPlugin(): Plugin {
           const clientIp = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '127.0.0.1';
           const hashedIp = await hashIp(clientIp);
 
-          const usage = getCurrentUsage({ userId, clientIp: hashedIp });
+          const dailyLimitDisabled =
+            env.ENABLE_DAILY_LIMIT === 'false' ||
+            !env.BETA_DAILY_REQUESTS_PER_USER ||
+            env.BETA_DAILY_REQUESTS_PER_USER === '0' ||
+            env.BETA_DAILY_REQUESTS_PER_USER === 'unlimited';
+          const dailyLimitPerUser = dailyLimitDisabled
+            ? 999999
+            : Number(env.BETA_DAILY_REQUESTS_PER_USER) || 999999;
+
+          const usage = getCurrentUsage(
+            { userId, clientIp: hashedIp },
+            {
+              enableDailyLimit: !dailyLimitDisabled,
+              dailyLimitPerUser,
+              maxWordsPerRequest: Number(env.MAX_WORDS_PER_REQUEST) || 800,
+            }
+          );
           return sendJson(res, 200, usage);
         }
 
@@ -156,13 +172,26 @@ export function devApiPlugin(): Plugin {
           const clientIp = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '127.0.0.1';
           const hashedIp = await hashIp(clientIp);
 
+          const dailyLimitDisabled =
+            env.ENABLE_DAILY_LIMIT === 'false' ||
+            !env.BETA_DAILY_REQUESTS_PER_USER ||
+            env.BETA_DAILY_REQUESTS_PER_USER === '0' ||
+            env.BETA_DAILY_REQUESTS_PER_USER === 'unlimited';
+          const dailyLimitPerUser = dailyLimitDisabled
+            ? 999999
+            : Number(env.BETA_DAILY_REQUESTS_PER_USER) || 999999;
+          const globalDailyCap = dailyLimitDisabled
+            ? 999999
+            : Number(env.GLOBAL_DAILY_REQUEST_CAP) || 999999;
+
           const limitCheck = checkAndIncrementUsage(
             { userId, clientIp: hashedIp },
             wordCount,
             {
-              dailyLimitPerUser: Number(env.BETA_DAILY_REQUESTS_PER_USER) || 3,
+              enableDailyLimit: !dailyLimitDisabled,
+              dailyLimitPerUser,
               maxWordsPerRequest: Number(env.MAX_WORDS_PER_REQUEST) || 800,
-              globalDailyCap: Number(env.GLOBAL_DAILY_REQUEST_CAP) || 500,
+              globalDailyCap,
             }
           );
 

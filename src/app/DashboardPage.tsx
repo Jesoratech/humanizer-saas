@@ -36,12 +36,14 @@ export function DashboardPage() {
     fetchUsage();
   }, []);
 
-  const usagePercent = usage
+  const isUnlimited = (usage?.dailyLimit || 0) >= 10000;
+  const usagePercent = usage && !isUnlimited
     ? Math.min((usage.requestsUsed / usage.dailyLimit) * 100, 100)
     : 0;
 
-  const meterClass =
-    usagePercent >= 100
+  const meterClass = isUnlimited
+    ? 'meter-fill-ok'
+    : usagePercent >= 100
       ? 'meter-fill-full'
       : usagePercent >= 66
         ? 'meter-fill-warn'
@@ -86,7 +88,7 @@ export function DashboardPage() {
                 <span className="badge badge-brand">Active</span>
               </div>
               <p className="dashboard-plan-desc">
-                {APP_CONFIG.betaDailyRequestsDefault} rewrites per day · Up
+                {isUnlimited ? 'Unlimited' : APP_CONFIG.betaDailyRequestsDefault} rewrites per day · Up
                 to {APP_CONFIG.maxWordsDefault} words per request
               </p>
             </div>
@@ -104,7 +106,7 @@ export function DashboardPage() {
                       {usage.requestsUsed}
                     </span>
                     <span className="dashboard-usage-total">
-                      / {usage.dailyLimit} rewrites used
+                      {isUnlimited ? ' rewrites used (Unlimited)' : `/ ${usage.dailyLimit} rewrites used`}
                     </span>
                   </div>
                   <div className="meter">
@@ -114,7 +116,7 @@ export function DashboardPage() {
                     />
                   </div>
                   <div className="dashboard-usage-detail">
-                    <span>{usage.requestsRemaining} remaining today</span>
+                    <span>{isUnlimited ? 'Unlimited remaining today' : `${usage.requestsRemaining} remaining today`}</span>
                     <span>{usage.wordsUsed} words processed</span>
                   </div>
                 </>

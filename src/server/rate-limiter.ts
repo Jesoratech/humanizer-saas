@@ -4,12 +4,13 @@ interface RateLimitConfig {
   dailyLimitPerUser: number;
   maxWordsPerRequest: number;
   globalDailyCap: number;
+  enableDailyLimit?: boolean;
 }
 
 const DEFAULT_CONFIG: RateLimitConfig = {
-  dailyLimitPerUser: 3,
+  dailyLimitPerUser: 999999,
   maxWordsPerRequest: 800,
-  globalDailyCap: 500,
+  globalDailyCap: 999999,
 };
 
 // In-memory tracking cache (resets daily or provides fallback if DB table not yet migrated)
@@ -109,7 +110,9 @@ export function checkAndIncrementUsage(
     record.lastDate = today;
   }
 
-  if (record.requests >= cfg.dailyLimitPerUser) {
+  const isDailyLimitEnforced = cfg.enableDailyLimit ?? (cfg.dailyLimitPerUser < 10000);
+
+  if (isDailyLimitEnforced && record.requests >= cfg.dailyLimitPerUser) {
     return {
       allowed: false,
       reason: `Daily limit reached (${cfg.dailyLimitPerUser} requests/day). Resets at midnight UTC.`,
@@ -135,9 +138,9 @@ export function checkAndIncrementUsage(
     allowed: true,
     usage: {
       date: today,
-      dailyLimit: cfg.dailyLimitPerUser,
+      dailyLimit: isDailyLimitEnforced ? cfg.dailyLimitPerUser : 999999,
       requestsUsed: record.requests,
-      requestsRemaining: Math.max(0, cfg.dailyLimitPerUser - record.requests),
+      requestsRemaining: isDailyLimitEnforced ? Math.max(0, cfg.dailyLimitPerUser - record.requests) : 999999,
       wordsUsed: record.words,
       maxWordsPerRequest: cfg.maxWordsPerRequest,
     },
@@ -150,6 +153,7 @@ export function getCurrentUsage(
 ): UsageData {
   const cfg = { ...DEFAULT_CONFIG, ...config };
   const today = getTodayString();
+  const isDailyLimitEnforced = cfg.enableDailyLimit ?? (cfg.dailyLimitPerUser < 10000);
 
   const key = identifier.userId
     ? `user:${identifier.userId}`
@@ -160,9 +164,9 @@ export function getCurrentUsage(
   if (!record || record.lastDate !== today) {
     return {
       date: today,
-      dailyLimit: cfg.dailyLimitPerUser,
+      dailyLimit: isDailyLimitEnforced ? cfg.dailyLimitPerUser : 999999,
       requestsUsed: 0,
-      requestsRemaining: cfg.dailyLimitPerUser,
+      requestsRemaining: isDailyLimitEnforced ? cfg.dailyLimitPerUser : 999999,
       wordsUsed: 0,
       maxWordsPerRequest: cfg.maxWordsPerRequest,
     };
@@ -170,9 +174,9 @@ export function getCurrentUsage(
 
   return {
     date: today,
-    dailyLimit: cfg.dailyLimitPerUser,
+    dailyLimit: isDailyLimitEnforced ? cfg.dailyLimitPerUser : 999999,
     requestsUsed: record.requests,
-    requestsRemaining: Math.max(0, cfg.dailyLimitPerUser - record.requests),
+    requestsRemaining: isDailyLimitEnforced ? Math.max(0, cfg.dailyLimitPerUser - record.requests) : 999999,
     wordsUsed: record.words,
     maxWordsPerRequest: cfg.maxWordsPerRequest,
   };

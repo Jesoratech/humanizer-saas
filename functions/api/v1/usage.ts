@@ -33,10 +33,20 @@ export const onRequestGet = async (context: {
 
   const hashedIp = await hashIp(clientIp);
 
+  const dailyLimitDisabled =
+    env.ENABLE_DAILY_LIMIT === 'false' ||
+    !env.BETA_DAILY_REQUESTS_PER_USER ||
+    env.BETA_DAILY_REQUESTS_PER_USER === '0' ||
+    env.BETA_DAILY_REQUESTS_PER_USER === 'unlimited';
+  const dailyLimitPerUser = dailyLimitDisabled
+    ? 999999
+    : Number(env.BETA_DAILY_REQUESTS_PER_USER) || 999999;
+
   const usage = getCurrentUsage(
     { userId, clientIp: hashedIp },
     {
-      dailyLimitPerUser: Number(env.BETA_DAILY_REQUESTS_PER_USER) || 3,
+      enableDailyLimit: !dailyLimitDisabled,
+      dailyLimitPerUser,
       maxWordsPerRequest: Number(env.MAX_WORDS_PER_REQUEST) || 800,
     }
   );
