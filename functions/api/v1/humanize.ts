@@ -146,7 +146,7 @@ export const onRequestPost = async (context: {
   try {
     const result = await executeHumanize(humanizeReq, {
       apiKey,
-      model: env.GEMINI_MODEL || 'gemini-2.5-flash',
+      model: env.GEMINI_MODEL || 'gemini-3.5-flash-lite',
     });
 
     return new Response(JSON.stringify(result), {

@@ -51,13 +51,16 @@ async function callGeminiApi(
 
   // Extract model and API key from endpoint for fallback capability
   const urlMatch = endpoint.match(/models\/([^:]+):generateContent\?key=([^&]+)/);
-  const currentModel = urlMatch?.[1] || 'gemini-2.5-flash';
+  const currentModel = urlMatch?.[1] || 'gemini-3.5-flash-lite';
   const apiKey = urlMatch?.[2] || '';
 
-  // Candidate models to try in case of 503, 500, or timeout
-  const candidateModels = [currentModel, 'gemini-2.5-flash', 'gemini-3.5-flash-lite'].filter(
-    (m, i, arr) => Boolean(m) && arr.indexOf(m) === i
-  );
+  // Candidate models to try in case of 429 (quota exceeded), 503 (high demand), 500, or timeout
+  const candidateModels = [
+    currentModel,
+    'gemini-3.5-flash-lite',
+    'gemini-flash-lite-latest',
+    'gemini-2.5-flash',
+  ].filter((m, i, arr) => Boolean(m) && arr.indexOf(m) === i);
 
   let lastError: (Error & { status?: number }) | null = null;
 
@@ -94,8 +97,8 @@ async function callGeminiApi(
         const err = new Error(errorMessage) as Error & { status?: number };
         err.status = response.status;
 
-        // If upstream 503/500/502 and another candidate exists, try fallback
-        if ((response.status >= 500 || response.status === 503 || response.status === 404) && idx < candidateModels.length - 1) {
+        // If upstream 503/500/502/429/404 and another candidate exists, try fallback
+        if ((response.status >= 500 || response.status === 503 || response.status === 429 || response.status === 404) && idx < candidateModels.length - 1) {
           lastError = err;
           continue;
         }
@@ -114,8 +117,8 @@ async function callGeminiApi(
       return text;
     } catch (err: unknown) {
       const errorObj = err as Error & { status?: number; name?: string };
-      // If timeout or network error and we have more candidates, retry next
-      if ((errorObj.name === 'AbortError' || errorObj.status === 503 || (errorObj.status && errorObj.status >= 500)) && idx < candidateModels.length - 1) {
+      // If timeout or network error or quota/upstream error and we have more candidates, retry next
+      if ((errorObj.name === 'AbortError' || errorObj.status === 429 || errorObj.status === 503 || (errorObj.status && errorObj.status >= 500)) && idx < candidateModels.length - 1) {
         lastError = errorObj;
         continue;
       }
@@ -253,7 +256,7 @@ export async function executeHumanize(
   options: HumanizerOptions
 ): Promise<HumanizeResponse> {
   const startTime = performance.now();
-  const model = options.model || 'gemini-2.5-flash';
+  const model = options.model || 'gemini-3.5-flash-lite';
   const promptVersion = request.promptVersion || 'v3';
   const engine = getPromptEngine(promptVersion);
 

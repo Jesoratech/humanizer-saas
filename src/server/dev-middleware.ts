@@ -48,7 +48,7 @@ export function devApiPlugin(): Plugin {
         // Load env for dev
         const env = loadEnv(server.config.mode, process.cwd(), '');
         const apiKey = env.GEMINI_API_KEY || process.env.GEMINI_API_KEY;
-        const model = env.GEMINI_MODEL || process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+        const model = env.GEMINI_MODEL || process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
         const modelEnabled = env.MODEL_REQUESTS_ENABLED !== 'false';
 
         // 1. Health check
