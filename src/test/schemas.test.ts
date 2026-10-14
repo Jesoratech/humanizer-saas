@@ -84,16 +84,22 @@ describe('Shared Schemas & Utilities (V3)', () => {
       }
     });
 
-    it('rejects empty text', () => {
-      const invalidReq = {
+    it('rejects empty text and whitespace-only text', () => {
+      const invalidEmpty = {
         text: '',
         tone: 'professional',
         audience: 'general',
         strength: 'balanced',
       };
+      expect(humanizeRequestSchema.safeParse(invalidEmpty).success).toBe(false);
 
-      const result = humanizeRequestSchema.safeParse(invalidReq);
-      expect(result.success).toBe(false);
+      const invalidWhitespace = {
+        text: '   \n\t  ',
+        tone: 'professional',
+        audience: 'general',
+        strength: 'balanced',
+      };
+      expect(humanizeRequestSchema.safeParse(invalidWhitespace).success).toBe(false);
     });
 
     it('rejects invalid tone values', () => {

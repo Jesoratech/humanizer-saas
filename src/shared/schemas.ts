@@ -135,7 +135,10 @@ export const humanizeRequestSchema = z.object({
   text: z
     .string()
     .min(1, 'Text is required')
-    .max(20000, 'Text is too long'),
+    .max(20000, 'Text is too long')
+    .refine((val) => val.trim().length > 0, {
+      message: 'Text cannot be empty or whitespace only',
+    }),
   tone: z.enum(TONES),
   audience: z.enum(AUDIENCES),
   strength: z.enum(STRENGTHS),
@@ -156,24 +159,34 @@ export const humanizeRequestSchema = z.object({
 export type HumanizeRequest = z.input<typeof humanizeRequestSchema>;
 export type HumanizeRequestParsed = z.infer<typeof humanizeRequestSchema>;
 
+export interface HumanizeResponseMetadata {
+  originalWordCount: number;
+  rewrittenWordCount: number;
+  tone: Tone;
+  strength: Strength;
+  audience: Audience;
+  documentType: DocumentType;
+  voicePreferences?: VoicePreferences;
+  durationMs: number;
+  model: string;
+  hasAuthorIntent: boolean;
+  intentIncludedInPrompt: boolean;
+  hasVoicePreferences: boolean;
+  extractedEntitiesCount: number;
+  restoredEntitiesCount: number;
+  placeholderIntegrityVerified: boolean;
+  warningCategories: string[];
+  preservedEntitiesCount: number;
+  flaggedEntitiesCount: number;
+}
+
 export interface HumanizeResponse {
   rewrittenText: string;
   provider: string;
   requestId: string;
   promptVersion: PromptVersion;
   warnings: string[];
-  metadata: {
-    originalWordCount: number;
-    rewrittenWordCount: number;
-    tone: Tone;
-    strength: Strength;
-    audience: Audience;
-    documentType?: DocumentType;
-    voicePreferences?: VoicePreferences;
-    durationMs?: number;
-    preservedEntitiesCount?: number;
-    flaggedEntitiesCount?: number;
-  };
+  metadata: HumanizeResponseMetadata;
 }
 
 export interface UsageData {

@@ -188,6 +188,11 @@ export async function executeHumanize(
       warningsCount: finalValidation.warnings.length,
     });
 
+    const hasAuthorIntent = Boolean(request.userIntent && request.userIntent.trim().length > 0);
+    const hasVoicePreferences = Boolean(
+      request.voicePreferences && Object.keys(request.voicePreferences).length > 0
+    );
+
     return {
       rewrittenText: finalValidation.sanitizedText,
       provider: model,
@@ -203,6 +208,14 @@ export async function executeHumanize(
         documentType: request.documentType || 'general_prose',
         voicePreferences: request.voicePreferences,
         durationMs: Math.round(durationMs),
+        model,
+        hasAuthorIntent,
+        intentIncludedInPrompt: hasAuthorIntent && (promptVersion === 'v3' || promptVersion === 'v2'),
+        hasVoicePreferences,
+        extractedEntitiesCount: entities.length,
+        restoredEntitiesCount: finalValidation.restoredEntitiesCount,
+        placeholderIntegrityVerified: finalValidation.placeholderIntegrityVerified,
+        warningCategories: finalValidation.warningCategories,
         preservedEntitiesCount:
           (request.protectedTerms?.length || 0) -
           finalValidation.missingProtectedTerms.length +

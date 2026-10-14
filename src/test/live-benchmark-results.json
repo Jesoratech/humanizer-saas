@@ -1,0 +1,493 @@
+{
+  "timestamp": "2026-10-13T09:26:25.329Z",
+  "model": "gemini-3.5-flash-lite",
+  "sampleCount": 8,
+  "results": [
+    {
+      "id": "sample_01_academic_abstract",
+      "name": "Academic Abstract with Citations & Math",
+      "category": "academic_abstract",
+      "documentType": "academic_abstract",
+      "sourceText": "In recent years, deep learning has demonstrated remarkable success across various domains. However, understanding theoretical generalization bounds remains a pivotal challenge [1, 2]. In this paper, we establish an empirical framework demonstrating that sample complexity scales as $O(1/\\sqrt{n})$ under mild regularity conditions. Our empirical findings substantiate prior theoretical conjectures and provide guidance for future architectural designs.",
+      "expectedBehavior": "Eliminate throat-clearing (\"In recent years\", \"remarkable success across various domains\"); retain exact citation [1, 2] and math formula $O(1/\\sqrt{n})$ verbatim; preserve scholarly rigor.",
+      "v2": {
+        "output": "Deep learning has demonstrated remarkable success across various domains in recent years, yet understanding its theoretical generalization bounds remains a pivotal challenge [1, 2]. To address this gap, we establish an empirical framework demonstrating that sample complexity scales as $O(1/\\sqrt{n})$ under mild regularity conditions. These findings substantiate prior theoretical conjectures and offer concrete guidance for future architectural designs.",
+        "wordCount": 58,
+        "durationMs": 8781,
+        "warnings": [],
+        "metadata": {
+          "originalWordCount": 56,
+          "rewrittenWordCount": 58,
+          "tone": "academic",
+          "strength": "balanced",
+          "audience": "academic",
+          "documentType": "academic_abstract",
+          "voicePreferences": {
+            "formality": "formal",
+            "technicalDepth": "expert"
+          },
+          "durationMs": 8781,
+          "model": "gemini-3.5-flash-lite",
+          "hasAuthorIntent": false,
+          "intentIncludedInPrompt": false,
+          "hasVoicePreferences": true,
+          "extractedEntitiesCount": 0,
+          "restoredEntitiesCount": 0,
+          "placeholderIntegrityVerified": true,
+          "warningCategories": [],
+          "preservedEntitiesCount": 0,
+          "flaggedEntitiesCount": 0
+        }
+      },
+      "v3": {
+        "output": "Deep learning has demonstrated remarkable success across various domains, yet understanding theoretical generalization bounds remains a persistent challenge [1, 2]. This paper establishes an empirical framework demonstrating that sample complexity scales as $O(1/\\sqrt{n})$ under mild regularity conditions. These empirical findings substantiate prior theoretical conjectures and provide concrete guidance for future architectural designs.",
+        "wordCount": 52,
+        "durationMs": 9897,
+        "warnings": [],
+        "metadata": {
+          "originalWordCount": 56,
+          "rewrittenWordCount": 52,
+          "tone": "academic",
+          "strength": "balanced",
+          "audience": "academic",
+          "documentType": "academic_abstract",
+          "voicePreferences": {
+            "formality": "formal",
+            "technicalDepth": "expert"
+          },
+          "durationMs": 9897,
+          "model": "gemini-3.5-flash-lite",
+          "hasAuthorIntent": false,
+          "intentIncludedInPrompt": false,
+          "hasVoicePreferences": true,
+          "extractedEntitiesCount": 2,
+          "restoredEntitiesCount": 2,
+          "placeholderIntegrityVerified": true,
+          "warningCategories": [],
+          "preservedEntitiesCount": 2,
+          "flaggedEntitiesCount": 0
+        }
+      }
+    },
+    {
+      "id": "sample_05_technical_doc",
+      "name": "Technical Doc with Inline Code & URL",
+      "category": "technical_doc",
+      "documentType": "technical_doc",
+      "sourceText": "It is important to remember that when configuring database connectivity, setting `pool_size: 20` prevents connection starvation in PostgreSQL. For production topologies, engineers can consult the reference guide at https://humanly.app/docs/postgres to calibrate timeout thresholds.",
+      "expectedBehavior": "Cut \"It is important to remember that\"; preserve `pool_size: 20`, URL https://humanly.app/docs/postgres, and protected term PostgreSQL verbatim.",
+      "v2": {
+        "output": "Configuring database connectivity with `pool_size: 20` prevents connection starvation in PostgreSQL. For production topologies, consult the reference guide at https://humanly.app/docs/postgres to calibrate timeout thresholds.",
+        "wordCount": 24,
+        "durationMs": 8499,
+        "warnings": [],
+        "metadata": {
+          "originalWordCount": 33,
+          "rewrittenWordCount": 24,
+          "tone": "professional",
+          "strength": "balanced",
+          "audience": "technical",
+          "documentType": "technical_doc",
+          "voicePreferences": {
+            "directness": "direct",
+            "conciseness": "concise",
+            "technicalDepth": "expert"
+          },
+          "durationMs": 8499,
+          "model": "gemini-3.5-flash-lite",
+          "hasAuthorIntent": true,
+          "intentIncludedInPrompt": true,
+          "hasVoicePreferences": true,
+          "extractedEntitiesCount": 0,
+          "restoredEntitiesCount": 0,
+          "placeholderIntegrityVerified": true,
+          "warningCategories": [],
+          "preservedEntitiesCount": 2,
+          "flaggedEntitiesCount": 0
+        }
+      },
+      "v3": {
+        "output": "When configuring database connectivity, setting `pool_size: 20` prevents connection starvation in PostgreSQL. For production topologies, consult the reference guide at https://humanly.app/docs/postgres to calibrate timeout thresholds.",
+        "wordCount": 25,
+        "durationMs": 10217,
+        "warnings": [],
+        "metadata": {
+          "originalWordCount": 33,
+          "rewrittenWordCount": 25,
+          "tone": "professional",
+          "strength": "balanced",
+          "audience": "technical",
+          "documentType": "technical_doc",
+          "voicePreferences": {
+            "directness": "direct",
+            "conciseness": "concise",
+            "technicalDepth": "expert"
+          },
+          "durationMs": 10217,
+          "model": "gemini-3.5-flash-lite",
+          "hasAuthorIntent": true,
+          "intentIncludedInPrompt": true,
+          "hasVoicePreferences": true,
+          "extractedEntitiesCount": 2,
+          "restoredEntitiesCount": 2,
+          "placeholderIntegrityVerified": true,
+          "warningCategories": [],
+          "preservedEntitiesCount": 4,
+          "flaggedEntitiesCount": 0
+        }
+      }
+    },
+    {
+      "id": "sample_08_marketing_copy_saas",
+      "name": "B2B SaaS Product Value Proposition",
+      "category": "marketing_copy",
+      "documentType": "marketing_copy",
+      "sourceText": "In today's fast-paced software ecosystem, debugging distributed microservices serves as a major bottleneck, draining valuable engineering hours. Our cutting-edge observability suite empowers teams to unlock real-time telemetry, fostering unprecedented productivity across cloud workflows.",
+      "expectedBehavior": "Purge clichés (\"In today's fast-paced software ecosystem\", \"serves as a major bottleneck\", \"cutting-edge\", \"unlock real-time telemetry\", \"fostering unprecedented productivity\"); highlight real product value with concrete impact.",
+      "v2": {
+        "output": "Debugging distributed microservices remains one of the primary bottlenecks in modern software engineering, quietly draining hundreds of valuable developer hours. Teams lose days chasing intermittent failures across complex cloud environments. \n\nReal-time telemetry changes that equation. By giving developers instant visibility into distributed workflows, engineering organizations can slash resolution times, cut through system noise, and get back to shipping features.",
+        "wordCount": 59,
+        "durationMs": 10034,
+        "warnings": [
+          "The rewrite expanded the text by more than 65%."
+        ],
+        "metadata": {
+          "originalWordCount": 33,
+          "rewrittenWordCount": 59,
+          "tone": "marketing",
+          "strength": "strong",
+          "audience": "business",
+          "documentType": "marketing_copy",
+          "durationMs": 10034,
+          "model": "gemini-3.5-flash-lite",
+          "hasAuthorIntent": true,
+          "intentIncludedInPrompt": true,
+          "hasVoicePreferences": false,
+          "extractedEntitiesCount": 0,
+          "restoredEntitiesCount": 0,
+          "placeholderIntegrityVerified": true,
+          "warningCategories": [
+            "LENGTH_EXPANSION"
+          ],
+          "preservedEntitiesCount": 0,
+          "flaggedEntitiesCount": 1
+        }
+      },
+      "v3": {
+        "output": "Debugging distributed microservices is a major bottleneck that drains valuable engineering hours. Our observability suite equips teams with real-time telemetry to accelerate development cycles and cut down on costly errors across cloud workflows.",
+        "wordCount": 33,
+        "durationMs": 9225,
+        "warnings": [],
+        "metadata": {
+          "originalWordCount": 33,
+          "rewrittenWordCount": 33,
+          "tone": "marketing",
+          "strength": "strong",
+          "audience": "business",
+          "documentType": "marketing_copy",
+          "durationMs": 9225,
+          "model": "gemini-3.5-flash-lite",
+          "hasAuthorIntent": true,
+          "intentIncludedInPrompt": true,
+          "hasVoicePreferences": false,
+          "extractedEntitiesCount": 0,
+          "restoredEntitiesCount": 0,
+          "placeholderIntegrityVerified": true,
+          "warningCategories": [],
+          "preservedEntitiesCount": 0,
+          "flaggedEntitiesCount": 0
+        }
+      }
+    },
+    {
+      "id": "sample_10_conversational_essay",
+      "name": "Conversational Personal Essay",
+      "category": "conversational",
+      "documentType": "conversational",
+      "sourceText": "To be completely honest, working from home for three consecutive years completely redefined how I view daily productivity. At first, I felt guilty whenever I stepped away from my laptop for ten minutes. Eventually, I realized that constant presence does not equate to meaningful output.",
+      "expectedBehavior": "Warm, authentic human voice; natural contractions; preserve personal insight without corporate stiffening.",
+      "v2": {
+        "output": "To be completely honest, working from home for three consecutive years completely redefined how I view daily productivity. At first, I felt guilty whenever I stepped away from my laptop for ten minutes. Eventually, I realized that constant presence does not equate to meaningful output.",
+        "wordCount": 45,
+        "durationMs": 12917,
+        "warnings": [],
+        "metadata": {
+          "originalWordCount": 45,
+          "rewrittenWordCount": 45,
+          "tone": "conversational",
+          "strength": "balanced",
+          "audience": "casual",
+          "documentType": "conversational",
+          "durationMs": 12917,
+          "model": "gemini-3.5-flash-lite",
+          "hasAuthorIntent": false,
+          "intentIncludedInPrompt": false,
+          "hasVoicePreferences": false,
+          "extractedEntitiesCount": 0,
+          "restoredEntitiesCount": 0,
+          "placeholderIntegrityVerified": true,
+          "warningCategories": [],
+          "preservedEntitiesCount": 0,
+          "flaggedEntitiesCount": 0
+        }
+      },
+      "v3": {
+        "output": "Working from home for three consecutive years completely redefined how I view daily productivity. At first, I felt guilty whenever I stepped away from my laptop for ten minutes. Eventually, I realized that constant presence does not equate to meaningful output.",
+        "wordCount": 41,
+        "durationMs": 10315,
+        "warnings": [],
+        "metadata": {
+          "originalWordCount": 45,
+          "rewrittenWordCount": 41,
+          "tone": "conversational",
+          "strength": "balanced",
+          "audience": "casual",
+          "documentType": "conversational",
+          "durationMs": 10315,
+          "model": "gemini-3.5-flash-lite",
+          "hasAuthorIntent": false,
+          "intentIncludedInPrompt": false,
+          "hasVoicePreferences": false,
+          "extractedEntitiesCount": 0,
+          "restoredEntitiesCount": 0,
+          "placeholderIntegrityVerified": true,
+          "warningCategories": [],
+          "preservedEntitiesCount": 0,
+          "flaggedEntitiesCount": 0
+        }
+      }
+    },
+    {
+      "id": "sample_11_clear_text_light_mode",
+      "name": "Already-Clear Prose (Anti-Overediting Test)",
+      "category": "clear_prose",
+      "documentType": "general_prose",
+      "sourceText": "Clean architecture separates business logic from infrastructure details. This separation keeps core domain rules independent of external frameworks, databases, and UI components, making systems easier to test and maintain over time.",
+      "expectedBehavior": "Anti-overediting test: text is already clear and concise. Light editing must retain >90% of words without unnecessary synonym swapping.",
+      "v2": {
+        "output": "Clean architecture separates business logic from infrastructure details. This separation keeps core domain rules independent of external frameworks, databases, and UI components, making systems easier to test and maintain over time.",
+        "wordCount": 31,
+        "durationMs": 8723,
+        "warnings": [],
+        "metadata": {
+          "originalWordCount": 31,
+          "rewrittenWordCount": 31,
+          "tone": "professional",
+          "strength": "light",
+          "audience": "general",
+          "documentType": "general_prose",
+          "durationMs": 8723,
+          "model": "gemini-3.5-flash-lite",
+          "hasAuthorIntent": false,
+          "intentIncludedInPrompt": false,
+          "hasVoicePreferences": false,
+          "extractedEntitiesCount": 0,
+          "restoredEntitiesCount": 0,
+          "placeholderIntegrityVerified": true,
+          "warningCategories": [],
+          "preservedEntitiesCount": 0,
+          "flaggedEntitiesCount": 0
+        }
+      },
+      "v3": {
+        "output": "Clean architecture separates business logic from infrastructure details. This separation keeps core domain rules independent of external frameworks, databases, and UI components, making systems easier to test and maintain over time.",
+        "wordCount": 31,
+        "durationMs": 9631,
+        "warnings": [],
+        "metadata": {
+          "originalWordCount": 31,
+          "rewrittenWordCount": 31,
+          "tone": "professional",
+          "strength": "light",
+          "audience": "general",
+          "documentType": "general_prose",
+          "durationMs": 9631,
+          "model": "gemini-3.5-flash-lite",
+          "hasAuthorIntent": false,
+          "intentIncludedInPrompt": false,
+          "hasVoicePreferences": false,
+          "extractedEntitiesCount": 0,
+          "restoredEntitiesCount": 0,
+          "placeholderIntegrityVerified": true,
+          "warningCategories": [],
+          "preservedEntitiesCount": 0,
+          "flaggedEntitiesCount": 0
+        }
+      }
+    },
+    {
+      "id": "sample_12_synthetic_robotic",
+      "name": "Heavy AI Robotic Syntax & Participial Stacking",
+      "category": "synthetic_robotic",
+      "documentType": "general_prose",
+      "sourceText": "In today's rapidly evolving digital landscape, it is of paramount importance to recognize that artificial intelligence serves as a pivotal cornerstone for modern enterprises, allowing organizations to streamline complex operational workflows while fostering an environment of continuous seamless innovation. Furthermore, our state-of-the-art solution harnesses the power of data to revolutionize operational efficiency.",
+      "expectedBehavior": "Dismantle introductory throat-clearing, participial stacking (\", allowing... while fostering...\"), and clichés (\"serves as a pivotal cornerstone\", \"harnesses the power of data\"); transform into clean, authoritative human prose.",
+      "v2": {
+        "output": "Artificial intelligence is no longer optional for modern enterprises. It is the cornerstone of operational efficiency, streamlining complex workflows and driving continuous innovation. Our solution harnesses this capability directly, transforming raw data into measurable operational advantage.",
+        "wordCount": 36,
+        "durationMs": 15950,
+        "warnings": [],
+        "metadata": {
+          "originalWordCount": 52,
+          "rewrittenWordCount": 36,
+          "tone": "professional",
+          "strength": "strong",
+          "audience": "business",
+          "documentType": "general_prose",
+          "durationMs": 15950,
+          "model": "gemini-3.5-flash-lite",
+          "hasAuthorIntent": false,
+          "intentIncludedInPrompt": false,
+          "hasVoicePreferences": false,
+          "extractedEntitiesCount": 0,
+          "restoredEntitiesCount": 0,
+          "placeholderIntegrityVerified": true,
+          "warningCategories": [],
+          "preservedEntitiesCount": 0,
+          "flaggedEntitiesCount": 0
+        }
+      },
+      "v3": {
+        "output": "Artificial intelligence is central to modern enterprise operations, streamlining complex workflows and driving continuous innovation. Our state-of-the-art solution harnesses this data capability to revolutionize operational efficiency.",
+        "wordCount": 26,
+        "durationMs": 11043,
+        "warnings": [],
+        "metadata": {
+          "originalWordCount": 52,
+          "rewrittenWordCount": 26,
+          "tone": "professional",
+          "strength": "strong",
+          "audience": "business",
+          "documentType": "general_prose",
+          "durationMs": 11043,
+          "model": "gemini-3.5-flash-lite",
+          "hasAuthorIntent": false,
+          "intentIncludedInPrompt": false,
+          "hasVoicePreferences": false,
+          "extractedEntitiesCount": 0,
+          "restoredEntitiesCount": 0,
+          "placeholderIntegrityVerified": true,
+          "warningCategories": [],
+          "preservedEntitiesCount": 0,
+          "flaggedEntitiesCount": 0
+        }
+      }
+    },
+    {
+      "id": "sample_13_urls_adjacent_punctuation",
+      "name": "Multiple URLs with Adjacent Punctuation",
+      "category": "technical_doc",
+      "documentType": "technical_doc",
+      "sourceText": "Developers should inspect our primary documentation at https://humanly.app/docs, review our status page at https://status.humanly.app; and submit bug tickets to https://github.com/humanly/issues. All endpoints require TLS 1.3.",
+      "expectedBehavior": "Ensure punctuation adjacent to URLs (comma, semicolon, period) is NOT captured into URL placeholders; URLs restored 100% clean without double punctuation.",
+      "v2": {
+        "output": "Developers should inspect our primary documentation at https://humanly.app/docs, review our status page at https://status.humanly.app, and submit bug tickets to https://github.com/humanly/issues. All endpoints require TLS 1.3.",
+        "wordCount": 25,
+        "durationMs": 8050,
+        "warnings": [],
+        "metadata": {
+          "originalWordCount": 25,
+          "rewrittenWordCount": 25,
+          "tone": "professional",
+          "strength": "balanced",
+          "audience": "technical",
+          "documentType": "technical_doc",
+          "durationMs": 8050,
+          "model": "gemini-3.5-flash-lite",
+          "hasAuthorIntent": false,
+          "intentIncludedInPrompt": false,
+          "hasVoicePreferences": false,
+          "extractedEntitiesCount": 0,
+          "restoredEntitiesCount": 0,
+          "placeholderIntegrityVerified": true,
+          "warningCategories": [],
+          "preservedEntitiesCount": 0,
+          "flaggedEntitiesCount": 0
+        }
+      },
+      "v3": {
+        "output": "Developers should inspect our primary documentation at https://humanly.app/docs, review our status page at https://status.humanly.app, and submit bug tickets to https://github.com/humanly/issues. All endpoints require TLS 1.3.",
+        "wordCount": 25,
+        "durationMs": 8352,
+        "warnings": [],
+        "metadata": {
+          "originalWordCount": 25,
+          "rewrittenWordCount": 25,
+          "tone": "professional",
+          "strength": "balanced",
+          "audience": "technical",
+          "documentType": "technical_doc",
+          "durationMs": 8352,
+          "model": "gemini-3.5-flash-lite",
+          "hasAuthorIntent": false,
+          "intentIncludedInPrompt": false,
+          "hasVoicePreferences": false,
+          "extractedEntitiesCount": 3,
+          "restoredEntitiesCount": 3,
+          "placeholderIntegrityVerified": true,
+          "warningCategories": [],
+          "preservedEntitiesCount": 3,
+          "flaggedEntitiesCount": 0
+        }
+      }
+    },
+    {
+      "id": "sample_15_quantitative_metrics",
+      "name": "Quantitative Financial Summary",
+      "category": "general_prose",
+      "documentType": "general_prose",
+      "sourceText": "In fiscal year 2025, ARR increased by 34.2% to $18.5M, while operating margins expanded to 21.8%. Total customer count reached 1,420, representing an annual retention rate of 94.6% and adjusted EBITDA of $3.2M.",
+      "expectedBehavior": "Zero numerical drift: preserve 2025, 34.2%, $18.5M, 21.8%, 1,420, 94.6%, $3.2M, ARR, and EBITDA exactly.",
+      "v2": {
+        "output": "In fiscal year 2025, ARR increased by 34.2% to $18.5M, while operating margins expanded to 21.8%. Total customer count reached 1,420, representing an annual retention rate of 94.6% and adjusted EBITDA of $3.2M.",
+        "wordCount": 33,
+        "durationMs": 6504,
+        "warnings": [],
+        "metadata": {
+          "originalWordCount": 33,
+          "rewrittenWordCount": 33,
+          "tone": "professional",
+          "strength": "light",
+          "audience": "business",
+          "documentType": "general_prose",
+          "durationMs": 6504,
+          "model": "gemini-3.5-flash-lite",
+          "hasAuthorIntent": false,
+          "intentIncludedInPrompt": false,
+          "hasVoicePreferences": false,
+          "extractedEntitiesCount": 0,
+          "restoredEntitiesCount": 0,
+          "placeholderIntegrityVerified": true,
+          "warningCategories": [],
+          "preservedEntitiesCount": 2,
+          "flaggedEntitiesCount": 0
+        }
+      },
+      "v3": {
+        "output": "In fiscal year 2025, ARR increased by 34.2% to $18.5M, while operating margins expanded to 21.8%. Total customer count reached 1,420, representing an annual retention rate of 94.6% and adjusted EBITDA of $3.2M.",
+        "wordCount": 33,
+        "durationMs": 2497,
+        "warnings": [],
+        "metadata": {
+          "originalWordCount": 33,
+          "rewrittenWordCount": 33,
+          "tone": "professional",
+          "strength": "light",
+          "audience": "business",
+          "documentType": "general_prose",
+          "durationMs": 2497,
+          "model": "gemini-3.5-flash-lite",
+          "hasAuthorIntent": false,
+          "intentIncludedInPrompt": false,
+          "hasVoicePreferences": false,
+          "extractedEntitiesCount": 0,
+          "restoredEntitiesCount": 0,
+          "placeholderIntegrityVerified": true,
+          "warningCategories": [],
+          "preservedEntitiesCount": 2,
+          "flaggedEntitiesCount": 0
+        }
+      }
+    }
+  ]
+}

@@ -32,7 +32,7 @@ describe('Prompt Architecture Comparison: v1 (Baseline) vs v2 (Syntax Polish) vs
     expect(v3Config.userPrompt).toContain(sample.sourceText);
   });
 
-  it('v3 enforces anti-overediting principles instead of universal keyword bans', () => {
+  it('v3 targets robotic patterns and throat-clearing instead of universal keyword bans', () => {
     const v1Config = promptEngineV1.build(baseRequest);
     const v3Config = promptEngineV3.build(baseRequest);
 
@@ -40,10 +40,11 @@ describe('Prompt Architecture Comparison: v1 (Baseline) vs v2 (Syntax Polish) vs
     expect(v1Config.systemPrompt).toContain('delve');
     expect(v1Config.systemPrompt).toContain('moreover');
 
-    // v3 focuses on purpose-driven editing, semantic fidelity, and avoiding unnecessary changes
-    expect(v3Config.systemPrompt).toContain('PURPOSE-DRIVEN EDITING (ANTI-OVEREDITING)');
-    expect(v3Config.systemPrompt).toContain('Do NOT rewrite clear, effective sentences simply to alter their wording');
-    expect(v3Config.systemPrompt).toContain('Preserve genuine transitions that express logical relationships');
+    // v3 targets the actual root causes of robotic prose: throat-clearing, participial chains, and hollow buzzwords
+    expect(v3Config.systemPrompt).toContain('ELIMINATE FORMULAIC & ROBOTIC WRITING PATTERNS');
+    expect(v3Config.systemPrompt).toContain('CUT INTRODUCTORY THROAT-CLEARING');
+    expect(v3Config.systemPrompt).toContain('DISMANTLE TRAILING PARTICIPIAL CHAINS');
+    expect(v3Config.systemPrompt).toContain('PRESERVE CLEAR SENTENCES');
   });
 
   it('v3 isolates untrusted user drafts in <draft_to_edit> and rejects prompt injection', () => {
@@ -108,19 +109,19 @@ describe('Prompt Architecture Comparison: v1 (Baseline) vs v2 (Syntax Polish) vs
 
     // Verify distinct editorial instructions
     expect(light.systemPrompt).toContain('LIGHT (Surgical Polish)');
-    expect(light.systemPrompt).toContain('Intervene ONLY where phrasing is genuinely awkward');
-    expect(light.systemPrompt).toContain('>85% retention');
+    expect(light.systemPrompt).toContain('Focus strictly on repairing grammatical errors');
+    expect(light.systemPrompt).toContain('>90% retention');
 
-    expect(balanced.systemPrompt).toContain('BALANCED (Clarity & Flow Optimization)');
-    expect(balanced.systemPrompt).toContain('Rephrase stiff or convoluted sentences');
+    expect(balanced.systemPrompt).toContain('BALANCED (Cadence & Clarity Optimization)');
+    expect(balanced.systemPrompt).toContain('Cut introductory throat-clearing');
 
-    expect(strong.systemPrompt).toContain('STRONG (Substantive Editorial Revision)');
+    expect(strong.systemPrompt).toContain('STRONG (Substantive Developmental Revision)');
     expect(strong.systemPrompt).toContain('authorized to restructure sentences and paragraphs');
 
     // Stable generation settings (not wild temperature jumps)
-    expect(light.temperature).toBe(0.35);
-    expect(balanced.temperature).toBe(0.60);
-    expect(strong.temperature).toBe(0.75);
+    expect(light.temperature).toBe(0.30);
+    expect(balanced.temperature).toBe(0.55);
+    expect(strong.temperature).toBe(0.70);
     expect(light.topP).toBeLessThanOrEqual(balanced.topP);
   });
 

@@ -81,13 +81,14 @@ Selects from 9 domain-specific editorial profiles:
 8. `marketing_copy`: Value proposition framing without unsubstantiated superlatives or fake stats.
 9. `conversational`: Relatable idioms, natural cadence, and relaxed syntax.
 
-### Stage D: Protected Content Extraction
+### Stage D: Protected Content Extraction (validator.ts)
 Before passing text to the LLM, regex extractors identify tokens that must not be altered:
-- URLs: `https?://[^\s)\]]+` -> `__HUMANLY_PROT_URL_{i}__`
-- Code blocks: ```` ```[\s\S]*?``` ```` -> `__HUMANLY_PROT_CODE_BLOCK_{i}__`
-- Inline code: `` `[^`]+` `` -> `__HUMANLY_PROT_INLINE_CODE_{i}__`
-- LaTeX / Math expressions: `$$...$$`, `$...$` -> `__HUMANLY_PROT_MATH_{i}__`
-- Academic citations: `[1, 2]`, `(Author et al., 2024)` -> `__HUMANLY_PROT_CITE_{i}__`
+- **Per-Session Nonce Collision Defense:** Each request generates a random session nonce so placeholders (`__HUMANLY_PROT_${sessionNonce}_URL_{i}__`) cannot collide with user input containing placeholder-like strings.
+- **Punctuation Trimming:** URLs with adjacent sentence punctuation (commas, semicolons, trailing periods) have punctuation trimmed before tokenization so that sentence syntax remains in surrounding prose.
+- Code blocks: ```` ```[\s\S]*?``` ```` -> `__HUMANLY_PROT_${nonce}_CODE_BLOCK_{i}__`
+- Inline code: `` `[^`]+` `` -> `__HUMANLY_PROT_${nonce}_INLINE_CODE_{i}__`
+- LaTeX / Math expressions: `$$...$$`, `$...$` (with LaTeX symbols/relations) -> `__HUMANLY_PROT_${nonce}_MATH_{i}__`
+- Academic citations: `[1, 2]`, `(Author et al., 2024)` -> `__HUMANLY_PROT_${nonce}_CITE_{i}__`
 
 ### Stage E: Prompt Construction & Injection Defense
 Constructs typed prompt configurations with clear security boundaries:
@@ -101,8 +102,9 @@ Constructs typed prompt configurations with clear security boundaries:
 - Single model call architecture; zero external paid classifiers or multi-model cascades.
 
 ### Stage G: Deterministic Content Restoration
-- Replaces every placeholder with the exact source entity using literal replacers (`() => entity.original`).
+- Replaces every placeholder with the exact source entity using literal function replacers (`() => entity.original`).
 - Verifies single-use integrity (detects missing or duplicated placeholders).
+- Scoped cleanup ensures only placeholders from the current session are swept, protecting literal user text.
 - If an entity is omitted by the model, records an itemized warning.
 
 ### Stage H: Structural Validation
@@ -111,6 +113,21 @@ Constructs typed prompt configurations with clear security boundaries:
 - Compares numbers, dates, currencies, and percentages to warn about altered figures.
 - Evaluates word count ratios (warns if output collapses below 45% or expands past 165%).
 
-### Stage I: User Review & Feedback
+### Stage I: Diagnostic Metadata & Logging (logger.ts)
+- Diagnostic metadata returned in `metadata`:
+  - `model`: Configured model identifier (`gemini-3.5-flash-lite`).
+  - `documentType`: Active editorial document profile.
+  - `strength`: Active editing mode.
+  - `hasAuthorIntent`: Boolean indicating presence of user intent.
+  - `intentIncludedInPrompt`: Confirms intent was injected into prompt.
+  - `hasVoicePreferences`: Boolean indicating presence of fine-grained voice settings.
+  - `extractedEntitiesCount` & `restoredEntitiesCount`: Counts of protected tokens.
+  - `placeholderIntegrityVerified`: Boolean confirming exact token roundtrip.
+  - `warningCategories`: Array of warning category codes (`LENGTH_EXPANSION`, `DROPPED_URLS`, etc.).
+  - `durationMs`: Total execution latency in milliseconds.
+- Production logs exclude raw user drafts and secrets.
+
+### Stage J: User Review & Feedback
 - Output is rendered in an editable textarea or side-by-side comparison diff view.
 - Diagnostic feedback categorizes quality issues (`meaning_changed`, `too_formal`, `too_casual`, `too_verbose`, `unclear_wording`, `awkward_result`, `good_result`, `other`).
+

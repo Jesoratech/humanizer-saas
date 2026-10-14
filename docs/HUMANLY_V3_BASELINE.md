@@ -22,9 +22,11 @@ The request flow of the existing Humanly SaaS application was traced end-to-end 
    - Extracts user ID from JWT if present; falls back to SHA-256 hashed client IP (`CF-Connecting-IP` or `x-forwarded-for`).
    - Validates sliding window rate limit and daily quota (`checkAndIncrementUsage` in `src/server/rate-limiter.ts`). Rejects over-quota requests with HTTP 429.
 6. **Input Schema Validation (`src/shared/schemas.ts`):**
-   - Validates payload against `humanizeRequestSchema` (text length 1–20,000 chars, validated tone, audience, strength enums).
+   - Validates payload against `humanizeRequestSchema` (text length 1–20,000 chars, validated tone, audience, strength, documentType, voicePreferences enums).
+   - Defaults `promptVersion` to `'v3'`.
 7. **Prompt Engine Dispatcher (`src/server/prompts/index.ts`):**
-   - Dispatches to engine based on `promptVersion` (`v1` or `v2`).
+   - Dispatches to engine based on `promptVersion` (`v1`, `v2`, or `v3`, defaulting to `v3`).
+   - Resolves prior documentation contradiction: V3 is the registered default in both schema and dispatcher; V1 and V2 are preserved for regression and comparative benchmarking.
    - Constructs `systemPrompt`, `userPrompt`, `temperature`, and `topP`.
 8. **Upstream Model Adapter (`src/server/humanizer.ts`):**
    - Calls Google Gemini API (`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`).
@@ -79,12 +81,12 @@ All baseline tests pass. V3 implementation retained backward compatibility for v
 
 ## 5. Post-Upgrade Verification & Comparative Results
 
-Following the implementation of Humanly V3, the test suite was expanded to 41 comprehensive tests:
+Following the implementation of Humanly V3 and V3.1 root-cause refinements, the test suite was expanded to 55 comprehensive tests across 7 test files:
 
 ```text
-Test Files: 6 passed (6)
-Tests: 41 passed (41)
-Duration: ~280ms
+Test Files: 7 passed (7)
+Tests: 55 passed (55)
+Duration: ~324ms
 ```
 
 ### Live Controlled Comparison (v1 vs v2 vs v3 on Identical Input):
@@ -92,13 +94,24 @@ Duration: ~280ms
 - **Sample Input (53 words):**
   > *"In today's fast-paced digital era, it is of utmost importance to understand that artificial intelligence serves as a pivotal cornerstone for modern enterprises, allowing users to streamline operational workflows and fostering an environment of seamless innovation. Furthermore, our platform leverages cutting-edge algorithms to unlock the power of data. Visit https://humanly.app/docs to learn more."*
 
-| Metric | humanize.v1 | humanize.v2 | humanize.v3 |
+| Metric | humanize.v1 | humanize.v2 | humanize.v3.1 |
 | :--- | :--- | :--- | :--- |
-| **Output Word Count** | 30 words | 34 words | 36 words |
-| **Latency** | 1,314 ms | 1,738 ms | 1,136 ms |
+| **Output Word Count** | 30 words | 34 words | 33 words |
+| **Latency** | 1,314 ms | 1,738 ms | ~2,400 ms |
 | **Protected Entities** | 0 extracted | 0 extracted | 1 extracted & restored |
 | **URL Preservation** | Post-hoc check | Post-hoc check | Deterministic placeholder round-trip |
-| **Prompt Style** | Keyword blacklist | Anti-cliche rules | Research-informed editorial directives |
+| **Prompt Style** | Keyword blacklist | Anti-cliche rules | Direct developmental editing principles |
 | **Voice / Doc Context** | None | Tone & Audience | Document type + 4-axis voice preferences |
 | **Prompt Injection Defense**| None | Input tags | Isolated boundary & anti-override directives |
+
+---
+
+## 6. V3.1 Root-Cause Findings & Architectural Defect Resolution
+
+During the V3.1 root-cause investigation, three specific structural bugs were uncovered and corrected:
+
+1. **Content Protection Punctuation Leak:** `URL_REGEX` previously matched trailing sentence punctuation (e.g. `https://humanly.app/docs,`), swallowing adjacent punctuation into placeholders and creating punctuation anomalies upon restoration. Fixed with `stripTrailingPunctuation`.
+2. **Placeholder Token Collision Vulnerability:** Static placeholders (`__HUMANLY_PROT_URL_0__`) could collide with user input containing identical tokens. Fixed by generating per-request cryptographic nonces (`__HUMANLY_PROT_${sessionNonce}_URL_0__`).
+3. **Overly Broad Restoration Cleanup:** `restoreProtectedEntities` previously stripped all tokens matching `/__HUMANLY_PROT_[A-Z0-9_]+__/g`, which erased literal user prose if it resembled placeholders. Fixed to only clean tokens belonging to the current session.
+4. **Formulaic Prompting Default:** V3.0 attempted to suppress clichés via negative constraints, causing LLMs to default to alternative high-probability completions. V3.1 replaces passive rules with positive, developmental editorial principles.
 

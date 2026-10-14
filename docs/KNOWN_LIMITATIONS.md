@@ -32,8 +32,17 @@
 
 ---
 
-## 5. Formatting & Token Extraction Edge Cases
+### 5. Formatting & Token Extraction Edge Cases
 
 - **Non-Standard Citations:** The citation extractor supports APA, IEEE, Harvard, and bracketed numeric citations (e.g., `[1]`, `[1, 2]`, `(Author et al., 2024)`). Unconventional citation formats (e.g., footnotes without brackets, obscure custom styles) may be treated as ordinary prose.
-- **Ambiguous Math Expressions:** The LaTeX extractor protects display math (`$$...$$`) and standard inline math (`$...$`). Raw ASCII formulas without delimiters may be edited for punctuation unless enclosed in backticks or protected terms.
+- **Ambiguous Math Expressions:** The LaTeX extractor protects display math (`$$...$$`) and standard inline math (`$...$`) containing mathematical symbols or relations. Plain numbers or currency amounts with dollar signs are preserved via numeric checks rather than math tokens.
 - **Complex Markdown Tables:** Tables are preserved when `preserveStructure: true` is set, but deeply nested multi-level ASCII formatting may occasionally undergo minor whitespace normalization.
+- **Surrounding Clause Restructuring:** While placeholders guarantee 100% token preservation, strong editing mode may reorganize the sentence clauses surrounding the token. Users requiring word-for-word preservation should select `light` mode (>90% word retention).
+
+---
+
+## 6. Structural Automated Testing vs. Editorial Quality
+
+- **Automated Test Scope:** Automated Vitest suites (`validator.test.ts`, `schemas.test.ts`, `evaluator.test.ts`) verify that parsing, token extraction, restoration, and prompt formatting work without crashing or dropping tokens.
+- **Editorial Quality Verification:** Automated tests cannot autonomously assess natural human voice, nuance, or cadence. Editorial quality must be verified through structured human benchmarks (see `docs/HUMANLY_V3_QUALITY_BENCHMARK.md`) using the 5-point rubric across meaning, clarity, naturalness, non-redundancy, and voice.
+

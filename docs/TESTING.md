@@ -2,39 +2,40 @@
 
 ## 1. Test Architecture Overview
 
-The Humanly test suite employs a multi-tiered testing strategy designed to verify functionality without incurring unnecessary API spend or relying on brittle external AI detector endpoints.
+The Humanly test suite employs a multi-tiered testing strategy structured into distinct categories to guarantee correctness without incurring unnecessary API spend:
 
-| Test Tier | File Path | Focus | Execution Cost |
+| Category | File Path | Focus | Execution Cost |
 | :--- | :--- | :--- | :--- |
-| **Schema Validation** | `src/test/schemas.test.ts` | Validates Zod schemas, defaults, and utility functions | Zero (Local Vitest) |
-| **Output Validator & Pipeline** | `src/test/validator.test.ts` | Tests placeholder extraction, restoration, math preservation, and edge cases | Zero (Local Vitest) |
-| **Prompt Architecture Comparison** | `src/test/baseline-comparison.test.ts` | Compares v1, v2, and v3 prompt configurations and directives | Zero (Local Vitest) |
-| **100-Passage Quality Benchmark** | `src/test/evaluator.test.ts` | Evaluates prompt generation and entity preservation across 10 writing domains | Zero (Local Vitest) |
-| **Mock Provider End-to-End** | `src/test/humanizer.test.ts` | Tests end-to-end execution with deterministic mock responses | Zero (Local Vitest) |
-| **Rate Limiter & Quotas** | `src/test/rate-limiter.test.ts` | Tests sliding-window rate limiting, IP hashing, and daily caps | Zero (Local Vitest) |
-| **Live Upstream Inference** | Live curl / Dev middleware | Tests real Google Gemini API calls with actual tokens and latency | Within configured quota |
+| **Unit Tests (Schemas & Limiter)** | `src/test/schemas.test.ts`<br>`src/test/rate-limiter.test.ts` | Validates Zod schemas, defaults, IP hashing, sliding-window rate limits, and daily caps | Zero (Local Vitest) |
+| **Unit Tests (Validator Pipeline)** | `src/test/validator.test.ts` | Tests placeholder extraction, nonce collision defense, URL punctuation stripping, citation formats, and math preservation | Zero (Local Vitest) |
+| **Prompt Architecture Tests** | `src/test/baseline-comparison.test.ts` | Asserts structural differences between v1, v2, and v3 prompt configurations and directives | Zero (Local Vitest) |
+| **Structural Corpus Tests** | `src/test/evaluator.test.ts` | Evaluates prompt generation and entity round-tripping across 100 corpus samples (Structural assertions, NOT quality assertions) | Zero (Local Vitest) |
+| **Quality Benchmark Tests** | `src/test/quality-benchmark.test.ts` | Asserts V3.1 prompt generation, voice injection, and placeholder integrity across 20 representative benchmark passages | Zero (Local Vitest) |
+| **Mock Provider Integration** | `src/test/humanizer.test.ts` | Tests end-to-end execution, diagnostic metadata emission, auto-retry logic, and 429 error handling | Zero (Local Vitest) |
+| **Live Upstream Inference** | Live curl / Dev middleware | Verifies real Google Gemini API calls (`gemini-3.5-flash-lite`) with actual token processing and latencies | Controlled free-tier quota |
+| **Human Editorial Benchmark** | `docs/HUMANLY_V3_QUALITY_BENCHMARK.md` | 5-axis 1–5 rubric evaluation of actual V2 vs V3.1 generated text across 20 distinct passages | Zero cost (Human review) |
 
 ---
 
 ## 2. Running the Test Suites
 
-### Running All Unit & Integration Tests
+### Running All Automated Unit & Integration Tests
 ```bash
 npm run test
 ```
-All 41 tests execute in ~300ms using Vitest in worker threads.
+All 55 automated tests execute in ~300ms using Vitest in worker threads.
 
 ### Running Linting (Oxlint)
 ```bash
 npm run lint
 ```
-Checks for unused variables, bad regex escapes, and code style. Must return 0 errors.
+Checks for unused variables, bad regex escapes, and code style. Must return 0 errors and 0 warnings.
 
 ### Running TypeScript & Production Build
 ```bash
 npm run build
 ```
-Executes `tsc -b` and Vite production bundling to `dist/`.
+Executes `tsc -b` and Vite production bundling to `dist/`. All modules must compile cleanly with 0 type errors.
 
 ---
 
@@ -68,12 +69,17 @@ A controlled test run was conducted against identical input text using the live 
 | Version | Rewritten Output | Words | Latency | Preserved Entities | Editorial Character |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **v1 (Baseline)** | *"Artificial intelligence is essential for modern enterprises, streamlining workflows and driving innovation. Our platform leverages advanced algorithms to help you turn data into actionable results. Visit https://humanly.app/docs to learn more."* | 30 | 1,314ms | 0 (post-hoc) | Basic synonym replacement; removed words on blacklist. |
-| **v2 (Syntax Polish)** | *"In today's digital era, artificial intelligence serves as a cornerstone for modern enterprises, streamlining workflows and driving innovation. Our platform leverages cutting-edge algorithms to unlock the power of data. Visit https://humanly.app/docs to learn more."* | 34 | 1,738ms | 0 (post-hoc) | Varied cadence; broke participial clauses. |
-| **v3 (Editorial Engine)** | *"In today's digital era, artificial intelligence serves as a cornerstone for modern enterprises, streamlining operational workflows and fostering seamless innovation. Our platform leverages advanced algorithms to unlock the power of data. Visit https://humanly.app/docs to learn more."* | 36 | 1,136ms | 1 (deterministic placeholder) | Protected placeholder extracted and restored verbatim; respected author intent and document context. |
+| **v2 (Syntax Polish)** | *"In today's digital era, artificial intelligence serves as a cornerstone for modern enterprises, streamlining workflows and driving innovation. Our platform leverages cutting-edge algorithms to unlock the power of data. Visit https://humanly.app/docs to learn more."* | 34 | 1,738ms | 0 (post-hoc) | Varied cadence; broke participial clauses. Kept clichés. |
+| **v3.0 (Early Directives)**| *"In today's digital era, artificial intelligence serves as a cornerstone for modern enterprises, streamlining operational workflows and fostering seamless innovation. Our platform leverages advanced algorithms to unlock the power of data. Visit https://humanly.app/docs to learn more."* | 36 | 1,136ms | 1 (deterministic placeholder) | Protected placeholder extracted and restored; still showed formulaic openings. |
+| **v3.1 (Refined Engine)** | *"Artificial intelligence is central to modern enterprise operations, streamlining complex workflows and driving continuous innovation. Our state-of-the-art solution harnesses this data capability to revolutionize operational efficiency. Visit https://humanly.app/docs to learn more."* | 33 | ~2,400ms | 1 (nonce placeholder) | Cut throat-clearing, purged stock metaphors, preserved entities and exact syntax. |
 
 ---
 
-## 5. Distinction Between Mock Tests and Live Evaluations
+## 5. Distinction Between Mock Tests and Quality Evaluations
 
-- **Mock Tests:** `src/test/humanizer.test.ts` and `src/test/validator.test.ts` test deterministic code paths, regex parsers, error branching, and boundary handlers. They do **not** call external servers and do not consume quota.
-- **Live Evaluations:** Used exclusively for quality validation during controlled development runs using `.env.local` credentials.
+- **Mock Tests & Structural Corpus Tests:**
+  `src/test/humanizer.test.ts`, `src/test/validator.test.ts`, and `src/test/evaluator.test.ts` verify deterministic code paths, regex parsers, error branching, and placeholder round-trip integrity. They execute locally without calling external LLM endpoints and consume zero quota.
+  > **Important:** Passing mock and structural tests proves **system robustness**, but does **not** prove that generated text reads naturally or meets high editorial standards.
+- **Human Editorial Benchmark & Live Smoke Tests:**
+  `docs/HUMANLY_V3_QUALITY_BENCHMARK.md` documents the empirical evaluation of real model outputs across 20 distinct passages scored by a 5-axis 1–5 rubric. Live smoke testing is run selectively via `run-live-benchmark.ts` to evaluate real-world phrasing while respecting free-tier API quotas.
+
