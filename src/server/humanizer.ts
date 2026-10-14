@@ -49,30 +49,203 @@ async function callGeminiApi(
     },
   };
 
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
+  // Extract model and API key from endpoint for fallback capability
+  const urlMatch = endpoint.match(/models\/([^:]+):generateContent\?key=([^&]+)/);
+  const currentModel = urlMatch?.[1] || 'gemini-2.5-flash';
+  const apiKey = urlMatch?.[2] || '';
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    let errorMessage = `AI model error (${response.status})`;
+  // Candidate models to try in case of 503, 500, or timeout
+  const candidateModels = [currentModel, 'gemini-2.5-flash', 'gemini-3.5-flash-lite'].filter(
+    (m, i, arr) => Boolean(m) && arr.indexOf(m) === i
+  );
+
+  let lastError: (Error & { status?: number }) | null = null;
+
+  for (let idx = 0; idx < candidateModels.length; idx++) {
+    const candidate = candidateModels[idx];
+    const candidateEndpoint = apiKey
+      ? `https://generativelanguage.googleapis.com/v1beta/models/${candidate}:generateContent?key=${apiKey}`
+      : endpoint;
+
     try {
-      const parsed = JSON.parse(errorText);
-      if (parsed.error?.message) {
-        errorMessage = parsed.error.message;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+      const response = await fetch(candidateEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage = `AI model error (${response.status})`;
+        try {
+          const parsed = JSON.parse(errorText);
+          if (parsed.error?.message) {
+            errorMessage = parsed.error.message;
+          }
+        } catch {
+          // Use fallback
+        }
+        const err = new Error(errorMessage) as Error & { status?: number };
+        err.status = response.status;
+
+        // If upstream 503/500/502 and another candidate exists, try fallback
+        if ((response.status >= 500 || response.status === 503 || response.status === 404) && idx < candidateModels.length - 1) {
+          lastError = err;
+          continue;
+        }
+
+        throw err;
       }
-    } catch {
-      // Use fallback
+
+      const data = (await response.json()) as GeminiResponse;
+      const parts = data.candidates?.[0]?.content?.parts || [];
+      const text = parts
+        .map((p) => p.text || '')
+        .filter(Boolean)
+        .join('')
+        .trim();
+
+      return text;
+    } catch (err: unknown) {
+      const errorObj = err as Error & { status?: number; name?: string };
+      // If timeout or network error and we have more candidates, retry next
+      if ((errorObj.name === 'AbortError' || errorObj.status === 503 || (errorObj.status && errorObj.status >= 500)) && idx < candidateModels.length - 1) {
+        lastError = errorObj;
+        continue;
+      }
+      throw err;
     }
-    const err = new Error(errorMessage) as Error & { status?: number };
-    err.status = response.status;
-    throw err;
   }
 
-  const data = (await response.json()) as GeminiResponse;
-  return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+  throw lastError || new Error('All AI model attempts failed.');
+}
+
+/**
+ * Second-pass naturalizer prompt.
+ * Takes already-rewritten text and calibrates human tone, rhythm,
+ * and high-perplexity phrasing that defeats AI detectors like ZeroGPT.
+ */
+function buildNaturalizerPrompt(
+  firstPassText: string,
+  tone: string = 'professional'
+): {
+  systemPrompt: string;
+  userPrompt: string;
+} {
+  const toneDirectives: Record<string, string> = {
+    professional: `Tone: Executive Editor / Senior Columnist (like The Atlantic or Economist).
+- Direct, authoritative, sharp, and authentic.
+- Avoid robotic corporate clichés, but DO NOT use juvenile slang or excessive casual fillers.
+- Vary cadence: mix 4-8 word assertive statements with nuanced 20-30 word explanations.`,
+    conversational: `Tone: Natural human conversation.
+- Genuine, warm, and flowing.
+- Natural contractions and relaxed transitions.
+- Eliminate stiff corporate phrasing.`,
+    academic: `Tone: Scholarly precision.
+- Analytical depth without repetitive LLM filler.
+- Eliminate 'Furthermore', 'Moreover', and robotic summaries.`,
+    simple: `Tone: Plain, clear English.
+- Short sentences, everyday words.
+- Zero jargon or complexity.`,
+    marketing: `Tone: Compelling copywriting.
+- High impact, energetic, benefit-driven.
+- Zero buzzwords.`,
+    creative: `Tone: Evocative, rhythmic prose.
+- Sensory depth and textured cadence.`,
+  };
+
+  const selectedTone = toneDirectives[tone] || toneDirectives.professional;
+
+  const systemPrompt = `You are a master developmental editor and human writing calibrator.
+Your ONLY mission is to make this text read 100% human-authored and trigger ZERO percent (0%) on all AI detection tools (ZeroGPT, GPTZero, Turnitin).
+
+${selectedTone}
+
+CRITICAL RULES TO ACHIEVE 0% AI DETECTION:
+1. DESTROY SERIAL ABSTRACT LISTS:
+   Never write lists of 3+ abstract nouns or gerunds (e.g. 'leadership, governance, education, healthcare, and infrastructure' or 'developing ideas, launching businesses, and applying skills').
+   Break them apart into distinct, grounded realities and concrete actions.
+2. RADICAL BURSTINESS (SENTENCE LENGTH ASYMMETRY):
+   - Force wide contrast in sentence lengths. Alternate a 4-7 word sentence with a 20-30 word sentence.
+   - Use em-dashes (—) or colons (:) to create authentic human pauses and mid-sentence pivots.
+   - Start occasional sentences with 'And', 'But', 'In reality,', 'Of course,', or 'To be clear,'.
+3. BANISHED AI SIGNATURES (DO NOT USE):
+   'vital', 'pivotal', 'testament', 'tapestry', 'beacon', 'delve', 'potential', 'sustainable', 'advancements', 'foster', 'landscape', 'broader opportunities', 'equally vital', 'overcoming obstacles', 'rich cultural heritage', 'coexist harmoniously', 'poised to lead', 'brighter future'.
+4. FACT PRESERVATION:
+   Keep every single fact, name, date, statistic, number, and protected token (__HUMANLY_PROT_*__) exactly accurate.
+5. OUTPUT:
+   Return ONLY the final polished text. No preamble, no quotes, no commentary.`;
+
+  const userPrompt = `Polish this text to sound authentically human:\n\n${firstPassText}`;
+
+  return { systemPrompt, userPrompt };
+}
+
+/**
+ * Post-processing: deterministic text transformations to break
+ * remaining AI patterns that survive model generation.
+ */
+function postProcessText(text: string): string {
+  let result = text;
+
+  // 1. Remove markdown fences or meta-preambles if model generated any
+  result = result.replace(/^```[a-z]*\n/gi, '').replace(/\n```$/gi, '');
+  result = result.replace(/^(?:Here (?:is|are) (?:the |your |several )?(?:rewrite|revision|options|revised text)[^:\n]*:?\s*)+/gi, '');
+  result = result.replace(/^\*\*(?:Option|Version) \d+[^:]*\*\*:\s*/gim, '');
+  result = result.replace(/^>(?:\s*)/gm, '');
+
+  // 2. Remove remaining AI crutch phrases that slipped through
+  const aiCrutches = [
+    /\bIn today's (?:rapidly |fast-)?(?:evolving|changing) (?:world|landscape|environment)\b[.,]?\s*/gi,
+    /\bIt is (?:important|worth|crucial|essential) to (?:note|remember|understand|recognize) that\b\s*/gi,
+    /\bplays a (?:crucial|pivotal|vital|key|important) role (?:in|for)\b/gi,
+    /\bplays a (?:crucial|pivotal|vital|key|important) role\b/gi,
+    /\bserves as a (?:testament|beacon|reminder) to\b/gi,
+    /\bserves as a (?:testament|beacon|reminder)\b/gi,
+    /\brich (?:tapestry|cultural heritage)\b/gi,
+    /\bharmonious (?:coexistence|blend|balance)\b/gi,
+    /\bnot only\s+(.+?)\s+but also\b/gi,
+    /\bis equally vital\b/gi,
+    /\bis of paramount importance\b/gi,
+    /\ba brighter (?:future|tomorrow)\b/gi,
+    /\bpoised to (?:lead|drive|spearhead)\b/gi,
+  ];
+
+  for (const regex of aiCrutches) {
+    if (regex.source.includes('not only')) {
+      result = result.replace(regex, '$1 and also');
+    } else if (regex.source.includes('equally vital')) {
+      result = result.replace(regex, 'matters just as much');
+    } else if (regex.source.includes('plays a')) {
+      result = result.replace(regex, 'is central to');
+    } else if (regex.source.includes('rich')) {
+      result = result.replace(regex, 'centuries of heritage');
+    } else if (regex.source.includes('brighter')) {
+      result = result.replace(regex, 'better future');
+    } else if (regex.source.includes('poised to')) {
+      result = result.replace(regex, 'ready to');
+    } else {
+      result = result.replace(regex, '');
+    }
+  }
+
+  // 3. Clean up double spaces from removals
+  result = result.replace(/[ \t]{2,}/g, ' ');
+  result = result.replace(/\n /g, '\n');
+  result = result.replace(/^\s+/gm, (match) => {
+    return match.length > 4 ? match : '';
+  });
+
+  // Remove empty lines caused by removals (keep intentional paragraph breaks)
+  result = result.replace(/\n{3,}/g, '\n\n');
+
+  return result.trim();
 }
 
 export async function executeHumanize(
@@ -80,7 +253,7 @@ export async function executeHumanize(
   options: HumanizerOptions
 ): Promise<HumanizeResponse> {
   const startTime = performance.now();
-  const model = options.model || 'gemini-3.5-flash-lite';
+  const model = options.model || 'gemini-2.5-flash';
   const promptVersion = request.promptVersion || 'v3';
   const engine = getPromptEngine(promptVersion);
 
@@ -114,7 +287,9 @@ export async function executeHumanize(
   );
 
   try {
-    // Primary inference attempt
+    // ============================================================
+    // PASS 1: Structural rewrite with the main prompt engine
+    // ============================================================
     rawText = await callGeminiApi(
       endpoint,
       promptConfig.systemPrompt,
@@ -122,6 +297,33 @@ export async function executeHumanize(
       promptConfig.temperature,
       promptConfig.topP
     );
+
+    // ============================================================
+    // PASS 2: Naturalizer pass (only for v3 balanced/strong)
+    // Runs a second model call to inject human tone and unpredictability
+    // ============================================================
+    if (promptVersion === 'v3' && request.strength !== 'light' && rawText.trim()) {
+      const naturalizer = buildNaturalizerPrompt(rawText, request.tone);
+      const pass2Result = await callGeminiApi(
+        endpoint,
+        naturalizer.systemPrompt,
+        naturalizer.userPrompt,
+        0.80,
+        0.95
+      );
+
+      if (pass2Result.trim()) {
+        rawText = pass2Result;
+      }
+    }
+
+    // ============================================================
+    // PASS 3: Deterministic post-processing
+    // Strip any surviving AI crutch phrases
+    // ============================================================
+    if (promptVersion === 'v3') {
+      rawText = postProcessText(rawText);
+    }
 
     finalValidation = validateRewrite(
       request.text,

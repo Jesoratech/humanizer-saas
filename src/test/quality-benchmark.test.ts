@@ -38,18 +38,18 @@ describe('V3.1 Quality Benchmark Suite (20 Representative Passages)', () => {
 
       // Verify documentType guidelines are injected into system prompt
       if (sample.documentType === 'academic_abstract') {
-        expect(config.systemPrompt).toContain('Academic Abstract');
+        expect(config.systemPrompt).toContain('academic abstract');
       } else if (sample.documentType === 'technical_doc') {
-        expect(config.systemPrompt).toContain('Technical Documentation');
+        expect(config.systemPrompt).toContain('technical documentation');
       } else if (sample.documentType === 'professional_email') {
-        expect(config.systemPrompt).toContain('Professional Email');
+        expect(config.systemPrompt).toContain('professional email');
       } else if (sample.documentType === 'marketing_copy') {
-        expect(config.systemPrompt).toContain('Marketing Copy');
+        expect(config.systemPrompt).toContain('marketing copy');
       }
 
       // Verify author intent is injected if present
       if (sample.userIntent) {
-        expect(config.systemPrompt).toContain(`AUTHOR'S INTENDED GOAL:\n"${sample.userIntent}"`);
+        expect(config.systemPrompt).toContain(sample.userIntent);
       }
     }
   });

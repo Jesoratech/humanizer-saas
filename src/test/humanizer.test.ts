@@ -71,12 +71,12 @@ describe('Humanizer Engine & Mock Provider Integration', () => {
 
       const result = await executeHumanize(request, {
         apiKey: 'test-api-key',
-        model: 'gemini-3.5-flash-lite',
+        model: 'gemini-3.8-flash',
       });
 
       expect(result.promptVersion).toBe('v3');
-      expect(result.provider).toBe('gemini-3.5-flash-lite');
-      expect(result.metadata.model).toBe('gemini-3.5-flash-lite');
+      expect(result.provider).toBe('gemini-3.8-flash');
+      expect(result.metadata.model).toBe('gemini-3.8-flash');
       expect(result.metadata.documentType).toBe('technical_doc');
       expect(result.metadata.hasAuthorIntent).toBe(true);
       expect(result.metadata.intentIncludedInPrompt).toBe(true);
