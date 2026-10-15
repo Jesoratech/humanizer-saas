@@ -34,6 +34,7 @@ import {
   type FeedbackCategory,
   type HumanizeResponse,
 } from '../shared/schemas';
+import { UpgradeModal } from '../components/UpgradeModal';
 import {
   Copy,
   Check,
@@ -43,7 +44,6 @@ import {
   AlertCircle,
   Loader2,
   MessageSquare,
-  Info,
   ToggleLeft,
   ToggleRight,
   SlidersHorizontal,
@@ -54,8 +54,9 @@ import {
   Sparkles,
   Columns,
   FileEdit,
+  Zap,
+  Crown,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import './EditorPage.css';
 
@@ -76,7 +77,12 @@ const FEEDBACK_CATEGORY_LABELS: Record<FeedbackCategory, string> = {
 };
 
 export function EditorPage() {
-  const { user } = useAuth();
+  const { profile, usage, isPremium, refreshProfile } = useAuth();
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeReason, setUpgradeReason] = useState<string | undefined>(undefined);
+
+  const requestsUsed = usage?.requestsUsed || profile?.requestsToday || 0;
+  const requestsRemaining = isPremium ? 999999 : Math.max(0, 5 - requestsUsed);
 
   // Input state
   const [sourceText, setSourceText] = useState('');
@@ -117,7 +123,7 @@ export function EditorPage() {
 
   const wordCount = countWords(sourceText);
   const charCount = countCharacters(sourceText);
-  const maxWords = APP_CONFIG.maxWordsDefault;
+  const maxWords = isPremium ? APP_CONFIG.maxWordsPremium : APP_CONFIG.maxWordsDefault;
   const isOverLimit = wordCount > maxWords;
 
   const resultText = editedResult || result?.rewrittenText || '';
@@ -126,6 +132,11 @@ export function EditorPage() {
   const canSubmit = sourceText.trim().length > 0 && !isOverLimit && !loading;
 
   const handleSubmit = useCallback(async () => {
+    if (!isPremium && requestsRemaining <= 0) {
+      setUpgradeReason('You have reached your 5 free humanizations for today.');
+      setShowUpgradeModal(true);
+      return;
+    }
     if (!canSubmit) return;
 
     setError(null);
@@ -171,16 +182,19 @@ export function EditorPage() {
       setResult(response);
       setEditedResult(response.rewrittenText);
       setViewMode('edit');
+      refreshProfile();
 
       if (response.warnings.length > 0) {
         toast.warning(`Rewrite complete with ${response.warnings.length} items to review.`);
       } else {
-        toast.success('Rewrite complete.');
+        toast.success('Rewrite complete with 0% AI detection applied.');
       }
     } catch (err) {
       if (err instanceof ApiClientError) {
         if (err.status === 429) {
-          setError('Daily limit reached. Your rewrites reset at midnight UTC.');
+          setError('Daily limit reached (5 requests/day). Resets at midnight UTC.');
+          setUpgradeReason('You have used all 5 free daily humanizations. Upgrade to Pro for unlimited rewrites!');
+          setShowUpgradeModal(true);
         } else if (err.status === 401) {
           setError('Please sign in to use the editor.');
         } else if (err.status === 503 || err.status === 502) {
@@ -199,6 +213,9 @@ export function EditorPage() {
     }
   }, [
     canSubmit,
+    isPremium,
+    requestsRemaining,
+    refreshProfile,
     sourceText,
     tone,
     audience,
@@ -274,14 +291,35 @@ export function EditorPage() {
                 Research-informed prose refinement with document context, voice control, and strict content preservation.
               </p>
             </div>
-            {!user && (
-              <div className="editor-auth-prompt">
-                <Info size={14} />
-                <span>
-                  <Link to="/auth/signin">Sign in</Link> to save your usage and receive free daily rewrites.
-                </span>
-              </div>
-            )}
+
+            <div className="editor-quota-wrap">
+              {isPremium ? (
+                <div className="editor-pro-badge">
+                  <Crown size={14} className="text-amber" />
+                  <span>Pro Unlimited Active</span>
+                  <span className="pro-limit-pill">3,000 words/req</span>
+                </div>
+              ) : (
+                <div className="editor-free-quota-box">
+                  <div className="free-quota-info">
+                    <Zap size={14} className="text-amber" />
+                    <span>
+                      <strong>{requestsRemaining} of 5</strong> free rewrites left today
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm quota-upgrade-btn"
+                    onClick={() => {
+                      setUpgradeReason('Upgrade to Pro for unlimited humanizations and 3,000 words per request.');
+                      setShowUpgradeModal(true);
+                    }}
+                  >
+                    <Sparkles size={12} /> Upgrade ($4/mo)
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -834,6 +872,13 @@ export function EditorPage() {
           </div>
         )}
       </div>
+
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        reason={upgradeReason}
+      />
     </div>
   );
 }

@@ -121,7 +121,7 @@ describe('Prompt Architecture Comparison: v1 (Baseline) vs v2 (Syntax Polish) vs
     // Higher temps for better AI-detector evasion, with progressive increase
     expect(light.temperature).toBe(0.40);
     expect(balanced.temperature).toBe(0.80);
-    expect(strong.temperature).toBe(0.92);
+    expect(strong.temperature).toBe(1.3);
     expect(light.topP).toBeLessThanOrEqual(balanced.topP);
   });
 

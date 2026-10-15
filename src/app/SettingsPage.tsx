@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Link } from 'react-router-dom';
+import { UpgradeModal } from '../components/UpgradeModal';
 import {
   TONES,
   TONE_LABELS,
@@ -13,7 +14,8 @@ import { User, Shield, PenLine, Trash2, ExternalLink } from 'lucide-react';
 import './SettingsPage.css';
 
 export function SettingsPage() {
-  const { user } = useAuth();
+  const { user, profile, isPremium } = useAuth();
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [defaultTone, setDefaultTone] = useState<Tone>('professional');
   const [defaultStrength, setDefaultStrength] = useState<Strength>('balanced');
 
@@ -36,9 +38,33 @@ export function SettingsPage() {
             <hr className="divider" />
             <div className="settings-row">
               <span className="settings-label">Plan</span>
-              <div className="settings-value">
-                <span className="badge badge-brand">Free Beta</span>
+              <div className="settings-value" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span className={`badge ${isPremium ? 'badge-brand' : 'badge-subtle'}`}>
+                  {profile?.tier === 'premium_yearly'
+                    ? 'Pro Annual ($30/yr)'
+                    : profile?.tier === 'premium_monthly'
+                      ? 'Pro Monthly ($4/mo)'
+                      : isPremium
+                        ? 'Lifetime VIP'
+                        : 'Free Beta (5/day)'}
+                </span>
+                {!isPremium && (
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    onClick={() => setShowUpgradeModal(true)}
+                  >
+                    Upgrade ($4/mo)
+                  </button>
+                )}
               </div>
+            </div>
+            <hr className="divider" />
+            <div className="settings-row">
+              <span className="settings-label">Daily Limit</span>
+              <span className="settings-value">
+                {isPremium ? 'Unlimited humanizations' : '5 humanizations per day'}
+              </span>
             </div>
             <hr className="divider" />
             <div className="settings-row">
@@ -51,6 +77,13 @@ export function SettingsPage() {
             </div>
           </div>
         </section>
+
+        {/* Upgrade Modal */}
+        <UpgradeModal
+          isOpen={showUpgradeModal}
+          onClose={() => setShowUpgradeModal(false)}
+          reason="Upgrade from Settings"
+        />
 
         {/* Writing Preferences */}
         <section className="settings-section">

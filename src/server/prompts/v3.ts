@@ -12,7 +12,7 @@ const TONE_DIRECTIVES_V3: Record<Tone, string> = {
   professional:
     'Write like a senior professional drafting a memo to their team—clear, poised, no jargon for jargon\'s sake. Sound like someone who actually knows the subject, not someone performing expertise.',
   academic:
-    'Write like a researcher explaining findings to a smart colleague over coffee—rigorous, precise vocabulary, but never deliberately obtuse. Qualify claims honestly.',
+    'Write like a real scholar\u2014not a textbook. Use the first-person sparingly but deliberately ("I argue," "we found"). Start some sentences with the finding, not the method. Hedge with genuine epistemic honesty, not formulaic cover ("The data are ambiguous here" rather than "Further research is needed"). Mix passive and active construction unpredictably. Break out of uniform paragraph structure: one paragraph can be a single sharp sentence; another can sprawl with a semi-colon and a parenthetical. NEVER use: Furthermore, Moreover, Additionally, In conclusion, It is worth noting, robust, comprehensive, multifaceted, leverage, underscore, highlight, demonstrate.',
   conversational:
     'Write like you\'re texting a knowledgeable friend—contractions, half-thoughts that finish themselves, the occasional "look," or "honestly." Not sloppy, just real.',
   simple:
@@ -38,9 +38,9 @@ const STRENGTH_CONFIGS_V3: Record<Strength, { instruction: string; temperature: 
   },
   strong: {
     instruction:
-      'DEEP REWRITE: Tear the draft apart and rebuild it. Reorganize paragraphs. Merge some ideas, split others. Rewrite from a completely different angle while keeping every single fact. The output should read like a different person wrote it about the same topic. Less than 15% of consecutive 4-word phrases should survive from the original.',
-    temperature: 0.92,
-    topP: 0.98,
+      'DEEP REWRITE: Tear the draft apart and rebuild it from scratch. Reorganize paragraphs—put conclusions first sometimes, or bury the main point. Merge some ideas, split others into fragments. Use extreme sentence asymmetry: place a 3-word sentence next to a 40-word sprawling thought. Add em-dashes, parentheticals, and rhetorical asides that feel genuinely human. Use the 2nd or 3rd most obvious word choice everywhere—not weird, just slightly unexpected. The output should read like a completely different person wrote it. Zero consecutive 4-word phrases from the original should survive.',
+    temperature: 1.3,
+    topP: 0.99,
   },
 };
 

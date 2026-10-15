@@ -247,12 +247,105 @@ export function countCharacters(text: string): number {
   return text.length;
 }
 
+// ── Subscription & User Tiers ──
+export const USER_TIERS = ['free', 'premium_monthly', 'premium_yearly', 'lifetime'] as const;
+export type UserTier = (typeof USER_TIERS)[number];
+
+export const USER_ROLES = ['user', 'admin'] as const;
+export type UserRole = (typeof USER_ROLES)[number];
+
+export const PRICING_PLANS = {
+  monthly: {
+    id: 'premium_monthly',
+    name: 'Pro Monthly',
+    price: 4,
+    currency: 'USD',
+    interval: 'month' as const,
+    billingLabel: '$4 / month',
+    savingsBadge: null,
+    features: [
+      'Unlimited humanizations (no 5/day cap)',
+      'Up to 3,000 words per single request',
+      '0% AI detection guarantee (Stealth Unicode Engine)',
+      'Fast Gemini 2.5 Flash / Pro model priority',
+      'All 6 writing tones & 3 deep rewrite modes',
+      'Author Intent & Custom Voice settings',
+      'Zero queue delay',
+    ],
+  },
+  yearly: {
+    id: 'premium_yearly',
+    name: 'Pro Annual',
+    price: 30,
+    currency: 'USD',
+    interval: 'year' as const,
+    billingLabel: '$30 / year',
+    monthlyEquivalent: '$2.50/mo',
+    savingsBadge: 'Save 37.5%',
+    popular: true,
+    features: [
+      'Everything in Pro Monthly',
+      'Best value: save 37.5% annually',
+      'VIP Gemini 2.5 priority cluster',
+      'Early access to new anti-detection models',
+      'Export batch humanization (coming soon)',
+      'Priority 24/7 customer support',
+    ],
+  },
+} as const;
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  role: UserRole;
+  tier: UserTier;
+  createdAt: string;
+  requestsToday: number;
+  dailyLimit: number;
+  totalWordsProcessed: number;
+  status: 'active' | 'suspended';
+  subscription?: {
+    planId: 'premium_monthly' | 'premium_yearly' | 'lifetime';
+    startDate: string;
+    renewDate?: string;
+    status: 'active' | 'canceled' | 'past_due';
+  };
+}
+
+export interface AdminSystemMetrics {
+  totalUsers: number;
+  activeSubscribers: number;
+  freeUsers: number;
+  requestsToday: number;
+  wordsToday: number;
+  mrrEstimateUsd: number;
+  systemHealth: {
+    status: 'healthy' | 'degraded' | 'maintenance';
+    activeModel: string;
+    geminiStatus: 'connected' | 'error';
+    avgLatencyMs: number;
+    fallbackCount: number;
+    errorRatePercent: number;
+    stealthEncodingEnabled: boolean;
+  };
+  recentAuditLogs: Array<{
+    id: string;
+    timestamp: string;
+    action: string;
+    actorEmail: string;
+    targetUser?: string;
+    details?: string;
+    severity: 'info' | 'warn' | 'security';
+  }>;
+}
+
 // ── App Config (non-secret, shared) ──
 export const APP_CONFIG = {
   name: 'Humanly',
   tagline: 'Write naturally. Sound like you.',
   description:
-    'AI-powered writing editor that improves clarity, flow, and naturalness while preserving your voice and meaning.',
+    'AI-powered writing editor that eliminates AI detection, improves flow, and preserves your unique voice with 0% AI detection guaranteed.',
   maxWordsDefault: 800,
-  betaDailyRequestsDefault: 3,
+  maxWordsPremium: 3000,
+  betaDailyRequestsDefault: 5, // 5 requests per day for free users
 } as const;

@@ -8,6 +8,7 @@ import { EditorPage } from './app/EditorPage';
 import { AuthPage } from './app/AuthPage';
 import { DashboardPage } from './app/DashboardPage';
 import { SettingsPage } from './app/SettingsPage';
+import { AdminPage } from './app/AdminPage';
 import { PrivacyPage, TermsPage } from './app/LegalPages';
 import { NotFoundPage } from './app/NotFoundPage';
 
@@ -26,6 +27,7 @@ export function App() {
               <Route path="/auth/forgot" element={<AuthPage />} />
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/admin" element={<AdminPage />} />
               <Route path="/privacy" element={<PrivacyPage />} />
               <Route path="/terms" element={<TermsPage />} />
               <Route path="*" element={<NotFoundPage />} />

@@ -3,71 +3,109 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '../hooks/useAuth';
-import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { APP_CONFIG } from '../shared/schemas';
-import { PenLine, Eye, EyeOff, Loader2 } from 'lucide-react';
+import {
+  PenLine,
+  Eye,
+  EyeOff,
+  Loader2,
+  ShieldCheck,
+  Lock,
+  ArrowRight,
+  CheckCircle2,
+} from 'lucide-react';
 import './AuthPage.css';
 
 const signInSchema = z.object({
-  email: z.string().email('Enter a valid email'),
+  email: z.string().email('Enter a valid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
-const signUpSchema = signInSchema.extend({
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: 'Passwords do not match',
-  path: ['confirmPassword'],
-});
+const signUpSchema = z
+  .object({
+    email: z.string().email('Enter a valid email address'),
+    password: z
+      .string()
+      .min(8, 'Password must be at least 8 characters')
+      .regex(/[0-9]/, 'Must include at least one number')
+      .regex(/[a-zA-Z]/, 'Must include at least one letter'),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'Passwords do not match',
+    path: ['confirmPassword'],
+  });
 
 type SignInForm = z.infer<typeof signInSchema>;
 type SignUpForm = z.infer<typeof signUpSchema>;
 
 export function AuthPage() {
-  const [searchParams] = useSearchParams();
-  const mode = searchParams.get('mode') || 'signin';
-  const isSignUp = mode === 'signup';
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isSignUp = location.pathname.includes('signup');
+  const [activeTab, setActiveTab] = useState<'signin' | 'signup'>(isSignUp ? 'signup' : 'signin');
 
   return (
     <div className="auth-page">
       <div className="auth-card card">
         <div className="auth-header">
           <div className="auth-logo">
-            <PenLine size={18} strokeWidth={2.5} />
+            <PenLine size={20} strokeWidth={2.5} />
           </div>
           <h1 className="auth-title">
-            {isSignUp ? 'Create your account' : `Sign in to ${APP_CONFIG.name}`}
+            {activeTab === 'signup' ? 'Create your account' : `Sign in to ${APP_CONFIG.name}`}
           </h1>
           <p className="auth-subtitle">
-            {isSignUp
-              ? 'Start improving your writing for free.'
-              : 'Welcome back. Pick up where you left off.'}
+            {activeTab === 'signup'
+              ? 'Get 5 free humanizations daily with zero AI detection.'
+              : 'Welcome back. Access your humanizer settings and limits.'}
           </p>
         </div>
 
-        {isSignUp ? <SignUpForm /> : <SignInForm />}
+        {/* Tab switch */}
+        <div className="auth-tabs">
+          <button
+            type="button"
+            className={`auth-tab ${activeTab === 'signin' ? 'active' : ''}`}
+            onClick={() => setActiveTab('signin')}
+          >
+            Sign In
+          </button>
+          <button
+            type="button"
+            className={`auth-tab ${activeTab === 'signup' ? 'active' : ''}`}
+            onClick={() => setActiveTab('signup')}
+          >
+            Create Account
+          </button>
+        </div>
 
-        <div className="auth-switch">
-          {isSignUp ? (
-            <span>
-              Already have an account?{' '}
-              <Link to="/auth/signin">Sign in</Link>
-            </span>
-          ) : (
-            <span>
-              Don&apos;t have an account?{' '}
-              <Link to="/auth/signup">Create one</Link>
-            </span>
-          )}
+
+        {activeTab === 'signup' ? (
+          <SignUpForm onSuccess={() => navigate('/editor')} />
+        ) : (
+          <SignInForm onSuccess={() => navigate('/editor')} />
+        )}
+
+        {/* Security Assurances */}
+        <div className="auth-security-footer">
+          <div className="security-point">
+            <ShieldCheck size={14} />
+            <span>256-bit TLS encrypted session</span>
+          </div>
+          <div className="security-point">
+            <Lock size={14} />
+            <span>Brute-force lockout & zero plain-text passwords</span>
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-function SignInForm() {
+function SignInForm({ onSuccess }: { onSuccess: () => void }) {
   const { signIn } = useAuth();
-  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -85,9 +123,9 @@ function SignInForm() {
     setIsSubmitting(true);
     try {
       await signIn(data.email, data.password);
-      navigate('/editor');
+      onSuccess();
     } catch (err) {
-      setServerError((err as Error).message || 'Sign-in failed');
+      setServerError((err as Error).message || 'Sign-in failed. Please check your credentials.');
     } finally {
       setIsSubmitting(false);
     }
@@ -96,7 +134,9 @@ function SignInForm() {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="auth-form">
       <div className="form-group">
-        <label htmlFor="signin-email" className="label">Email</label>
+        <label htmlFor="signin-email" className="label">
+          Email address
+        </label>
         <input
           id="signin-email"
           type="email"
@@ -110,8 +150,12 @@ function SignInForm() {
 
       <div className="form-group">
         <div className="form-group-header">
-          <label htmlFor="signin-password" className="label">Password</label>
-          <Link to="/auth/forgot" className="auth-forgot">Forgot?</Link>
+          <label htmlFor="signin-password" className="label">
+            Password
+          </label>
+          <Link to="/auth/forgot" className="auth-forgot">
+            Forgot?
+          </Link>
         </div>
         <div className="password-input-wrap">
           <input
@@ -134,39 +178,42 @@ function SignInForm() {
         {errors.password && <span className="error-text">{errors.password.message}</span>}
       </div>
 
-      {serverError && (
-        <div className="auth-error" role="alert">{serverError}</div>
-      )}
+      {serverError && <div className="auth-error" role="alert">{serverError}</div>}
 
       <button type="submit" className="btn btn-primary btn-lg auth-submit" disabled={isSubmitting}>
         {isSubmitting ? <Loader2 size={18} className="spinning" /> : null}
-        Sign in
+        <span>Sign In to Dashboard</span>
+        <ArrowRight size={16} />
       </button>
     </form>
   );
 }
 
-function SignUpForm() {
+function SignUpForm({ onSuccess }: { onSuccess: () => void }) {
   const { signUp } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState('');
-  const [success, setSuccess] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<SignUpForm>({
     resolver: zodResolver(signUpSchema),
   });
+
+  const passwordVal = watch('password', '');
+  const hasMinLength = passwordVal.length >= 8;
+  const hasNumber = /[0-9]/.test(passwordVal);
 
   const onSubmit = async (data: SignUpForm) => {
     setServerError('');
     setIsSubmitting(true);
     try {
       await signUp(data.email, data.password);
-      setSuccess(true);
+      onSuccess();
     } catch (err) {
       setServerError((err as Error).message || 'Sign-up failed');
     } finally {
@@ -174,22 +221,12 @@ function SignUpForm() {
     }
   };
 
-  if (success) {
-    return (
-      <div className="auth-success">
-        <h3>Check your email</h3>
-        <p>
-          We sent a verification link to your email. Click it to activate your
-          account, then <Link to="/auth/signin">sign in</Link>.
-        </p>
-      </div>
-    );
-  }
-
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="auth-form">
       <div className="form-group">
-        <label htmlFor="signup-email" className="label">Email</label>
+        <label htmlFor="signup-email" className="label">
+          Email address
+        </label>
         <input
           id="signup-email"
           type="email"
@@ -202,13 +239,15 @@ function SignUpForm() {
       </div>
 
       <div className="form-group">
-        <label htmlFor="signup-password" className="label">Password</label>
+        <label htmlFor="signup-password" className="label">
+          Create password
+        </label>
         <div className="password-input-wrap">
           <input
             id="signup-password"
             type={showPassword ? 'text' : 'password'}
             className="input"
-            placeholder="At least 6 characters"
+            placeholder="At least 8 characters"
             autoComplete="new-password"
             {...register('password')}
           />
@@ -221,11 +260,23 @@ function SignUpForm() {
             {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
         </div>
+
+        {/* Live password strength indicator */}
+        <div className="password-hints">
+          <span className={`hint-pill ${hasMinLength ? 'hint-valid' : ''}`}>
+            {hasMinLength ? <CheckCircle2 size={12} /> : '•'} 8+ characters
+          </span>
+          <span className={`hint-pill ${hasNumber ? 'hint-valid' : ''}`}>
+            {hasNumber ? <CheckCircle2 size={12} /> : '•'} 1+ number
+          </span>
+        </div>
         {errors.password && <span className="error-text">{errors.password.message}</span>}
       </div>
 
       <div className="form-group">
-        <label htmlFor="signup-confirm" className="label">Confirm password</label>
+        <label htmlFor="signup-confirm" className="label">
+          Confirm password
+        </label>
         <input
           id="signup-confirm"
           type="password"
@@ -239,18 +290,16 @@ function SignUpForm() {
         )}
       </div>
 
-      {serverError && (
-        <div className="auth-error" role="alert">{serverError}</div>
-      )}
+      {serverError && <div className="auth-error" role="alert">{serverError}</div>}
 
       <button type="submit" className="btn btn-primary btn-lg auth-submit" disabled={isSubmitting}>
         {isSubmitting ? <Loader2 size={18} className="spinning" /> : null}
-        Create account
+        <span>Create Account & Start</span>
+        <ArrowRight size={16} />
       </button>
 
       <p className="auth-terms">
-        By creating an account, you agree to our{' '}
-        <Link to="/terms">Terms of Service</Link> and{' '}
+        By continuing, you agree to our <Link to="/terms">Terms of Service</Link> and{' '}
         <Link to="/privacy">Privacy Policy</Link>.
       </p>
     </form>
@@ -285,7 +334,7 @@ export function ForgotPasswordPage() {
         <div className="auth-header">
           <h1 className="auth-title">Reset your password</h1>
           <p className="auth-subtitle">
-            Enter your email and we&apos;ll send you a reset link.
+            Enter your email and we&apos;ll send you a secure recovery link.
           </p>
         </div>
 
@@ -293,14 +342,16 @@ export function ForgotPasswordPage() {
           <div className="auth-success">
             <h3>Check your email</h3>
             <p>
-              If an account exists for {email}, you'll receive a password reset
-              link. <Link to="/auth/signin">Back to sign in</Link>
+              If an account exists for {email}, you'll receive a password reset link shortly.{' '}
+              <Link to="/auth">Back to sign in</Link>
             </p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="auth-form">
             <div className="form-group">
-              <label htmlFor="forgot-email" className="label">Email</label>
+              <label htmlFor="forgot-email" className="label">
+                Email address
+              </label>
               <input
                 id="forgot-email"
                 type="email"
@@ -320,7 +371,7 @@ export function ForgotPasswordPage() {
               {loading ? <Loader2 size={18} className="spinning" /> : null}
               Send reset link
             </button>
-            <Link to="/auth/signin" className="auth-back-link">
+            <Link to="/auth" className="auth-back-link">
               Back to sign in
             </Link>
           </form>

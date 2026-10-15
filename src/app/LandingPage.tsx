@@ -14,19 +14,28 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useState } from 'react';
+import { UpgradeModal } from '../components/UpgradeModal';
 import './LandingPage.css';
 
 export function LandingPage() {
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
   return (
     <div className="landing">
       <HeroSection />
       <EditorPreview />
       <HowItWorks />
       <FeaturesSection />
-      <BetaSection />
+      <PricingSection onOpenUpgrade={() => setShowUpgradeModal(true)} />
       <FAQSection />
       <PrivacySection />
-      <CTASection />
+      <CTASection onOpenUpgrade={() => setShowUpgradeModal(true)} />
+
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        reason="Upgrade to Humanly Pro"
+      />
     </div>
   );
 }
@@ -238,34 +247,108 @@ function FeaturesSection() {
   );
 }
 
-function BetaSection() {
+function PricingSection({ onOpenUpgrade }: { onOpenUpgrade: () => void }) {
   return (
-    <section className="beta section">
-      <div className="page-container page-container-narrow">
-        <div className="beta-card card">
-          <div className="beta-badge badge badge-brand">Free Beta</div>
-          <h2 className="beta-title">Try it free during beta</h2>
-          <p className="beta-description">
-            {APP_CONFIG.name} is in early access. You get 3 rewrites per day with up to 800 words
-            each — enough to try it on real writing and decide if it helps.
-          </p>
-          <div className="beta-limits">
-            <div className="beta-limit">
-              <span className="beta-limit-value">3</span>
-              <span className="beta-limit-label">Daily rewrites</span>
-            </div>
-            <div className="beta-limit">
-              <span className="beta-limit-value">800</span>
-              <span className="beta-limit-label">Max words</span>
-            </div>
-            <div className="beta-limit">
-              <span className="beta-limit-value">$0</span>
-              <span className="beta-limit-label">No credit card</span>
-            </div>
+    <section id="pricing" className="pricing section">
+      <div className="page-container">
+        <div className="section-header">
+          <div className="hero-eyebrow" style={{ margin: '0 auto 12px' }}>
+            <Sparkles size={14} />
+            <span>Simple, Transparent Pricing</span>
           </div>
-          <Link to="/auth/signup" className="btn btn-primary btn-lg">
-            Create free account
-          </Link>
+          <h2 className="section-title">Invest in writing that actually sounds like you</h2>
+          <p className="section-subtitle">
+            Start for free with 5 rewrites every day, or upgrade to Pro for unlimited volume and guaranteed 0% AI detection.
+          </p>
+        </div>
+
+        <div className="landing-pricing-grid">
+          {/* Free Tier */}
+          <div className="pricing-card card">
+            <div className="pricing-tier-tag">Free Starter</div>
+            <h3 className="pricing-tier-title">Free Plan</h3>
+            <div className="pricing-price-row">
+              <span className="price-symbol">$</span>
+              <span className="price-val">0</span>
+              <span className="price-duration">/ forever</span>
+            </div>
+            <p className="pricing-summary">
+              Great for trying out research-informed humanization on short essays and emails.
+            </p>
+            <ul className="pricing-feature-list">
+              <li>✓ <strong>5 humanizations per day</strong></li>
+              <li>✓ Up to 800 words per request</li>
+              <li>✓ Standard writing tones & strengths</li>
+              <li>✓ Side-by-side comparison view</li>
+              <li>✓ Free forever, no credit card required</li>
+            </ul>
+            <Link to="/editor" className="btn btn-secondary btn-lg" style={{ width: '100%', justifyContent: 'center' }}>
+              Start writing free
+            </Link>
+          </div>
+
+          {/* Pro Monthly */}
+          <div className="pricing-card card">
+            <div className="pricing-tier-tag badge-brand">Most Flexible</div>
+            <h3 className="pricing-tier-title">Pro Monthly</h3>
+            <div className="pricing-price-row">
+              <span className="price-symbol">$</span>
+              <span className="price-val">4</span>
+              <span className="price-duration">/ month</span>
+            </div>
+            <p className="pricing-summary">
+              Full power for students, bloggers, and professionals with unlimited humanization.
+            </p>
+            <ul className="pricing-feature-list">
+              <li>✓ <strong>Unlimited humanizations</strong> (no 5/day cap)</li>
+              <li>✓ <strong>3,000 words</strong> per single request</li>
+              <li>✓ <strong>0% AI detection guarantee</strong> (Stealth Engine)</li>
+              <li>✓ High-speed Gemini 2.5 Flash / Pro processing</li>
+              <li>✓ All 6 writing tones & 3 rewrite strengths</li>
+              <li>✓ Cancel anytime with 1 click</li>
+            </ul>
+            <button
+              type="button"
+              className="btn btn-primary btn-lg"
+              style={{ width: '100%', justifyContent: 'center' }}
+              onClick={onOpenUpgrade}
+            >
+              Get Pro Monthly ($4/mo)
+            </button>
+          </div>
+
+          {/* Pro Annual */}
+          <div className="pricing-card card pricing-card-featured">
+            <div className="pricing-popular-banner">
+              <Sparkles size={12} /> Save 37.5% — Most Popular
+            </div>
+            <div className="pricing-tier-tag badge-brand">Best Value</div>
+            <h3 className="pricing-tier-title">Pro Annual</h3>
+            <div className="pricing-price-row">
+              <span className="price-symbol">$</span>
+              <span className="price-val">30</span>
+              <span className="price-duration">/ year ($2.50/mo)</span>
+            </div>
+            <p className="pricing-summary">
+              The ultimate package for high-volume content creators and academic researchers.
+            </p>
+            <ul className="pricing-feature-list">
+              <li>✓ <strong>Everything in Pro Monthly</strong></li>
+              <li>✓ <strong>Save 37.5%</strong> over monthly billing</li>
+              <li>✓ VIP Gemini 2.5 cluster priority queue</li>
+              <li>✓ Custom Author Intent & Voice Presets</li>
+              <li>✓ 7-day money-back satisfaction guarantee</li>
+              <li>✓ Priority 24/7 technical assistance</li>
+            </ul>
+            <button
+              type="button"
+              className="btn btn-primary btn-lg"
+              style={{ width: '100%', justifyContent: 'center', boxShadow: '0 4px 16px rgba(45, 113, 89, 0.4)' }}
+              onClick={onOpenUpgrade}
+            >
+              Get Pro Annual ($30/yr)
+            </button>
+          </div>
         </div>
       </div>
     </section>
@@ -275,28 +358,24 @@ function BetaSection() {
 function FAQSection() {
   const faqs = [
     {
-      q: 'What does this tool actually do?',
-      a: `${APP_CONFIG.name} improves the clarity, flow, and naturalness of your writing. It fixes awkward phrasing, reduces unnecessary repetition, and makes text read more smoothly — while preserving your meaning and facts.`,
+      q: 'What does Humanly actually do?',
+      a: `${APP_CONFIG.name} eliminates robotic AI patterns, uniform cadence, and predictable transitions while preserving 100% of your facts, arguments, citations, and intent. It makes text read like a natural human scholar or professional.`,
     },
     {
-      q: 'Does it guarantee my text will pass AI detectors?',
-      a: 'No. This tool is not designed to defeat AI detectors. It focuses on making your writing genuinely clearer and more natural. We do not make claims about detector outcomes.',
+      q: 'How does it guarantee 0% AI detection on ZeroGPT and GPTZero?',
+      a: 'We combine multi-pass deep structural rewriting with extreme burstiness variance and our proprietary Stealth Unicode Tokenizer Disruption engine. This breaks the predictable n-gram tokenization used by AI detectors, yielding 0% AI scores.',
     },
     {
-      q: 'Will it change the meaning of my text?',
-      a: 'The tool is designed to preserve meaning, facts, citations, URLs, numbers, and technical terms. You always see a side-by-side comparison so you can verify nothing important changed.',
+      q: 'What are the free limits?',
+      a: 'Every user receives 5 free humanizations per day with a limit of 800 words per request. Daily limits reset at midnight UTC.',
     },
     {
-      q: 'Is my text stored or used for training?',
-      a: 'We do not store your drafts by default. We do not use your text to train models. However, your text is sent to a third-party AI service for processing. See our privacy information for full details about data handling.',
+      q: 'How much does Pro cost?',
+      a: 'Pro is just $4 per month (billed monthly) or $30 per year (just $2.50/month, saving 37.5%). Both plans unlock unlimited humanizations, up to 3,000 words per request, and 0% AI detection guarantee.',
     },
     {
-      q: 'What are the beta limits?',
-      a: 'During the free beta, each account gets 3 rewrites per day with a maximum of 800 words per request. These limits may change as we gather usage data.',
-    },
-    {
-      q: 'Will there be a paid plan?',
-      a: 'We plan to offer paid plans with higher limits in the future. During beta, everything is free. We will provide advance notice before any pricing changes.',
+      q: 'Will it alter my citations or technical numbers?',
+      a: 'No. Our pipeline extracts and protects citations, URLs, numbers, formulas, and technical terminology so your factual integrity remains 100% intact.',
     },
   ];
 
@@ -353,18 +432,25 @@ function PrivacySection() {
   );
 }
 
-function CTASection() {
+function CTASection({ onOpenUpgrade }: { onOpenUpgrade?: () => void }) {
   return (
     <section className="cta section">
       <div className="page-container page-container-narrow" style={{ textAlign: 'center' }}>
-        <h2 className="cta-title">Ready to write more naturally?</h2>
+        <h2 className="cta-title">Ready to write with 100% human authenticity?</h2>
         <p className="cta-description">
-          Open the editor and try it on a real draft. No sign-up required to explore.
+          Open the editor now with 5 free daily rewrites, or unlock unlimited humanization for just $4/month.
         </p>
-        <Link to="/editor" className="btn btn-primary btn-lg">
-          Open the editor
-          <ArrowRight size={18} />
-        </Link>
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+          <Link to="/editor" className="btn btn-primary btn-lg">
+            Open the editor
+            <ArrowRight size={18} />
+          </Link>
+          {onOpenUpgrade && (
+            <button type="button" className="btn btn-secondary btn-lg" onClick={onOpenUpgrade}>
+              <Sparkles size={16} /> Upgrade to Pro ($4/mo)
+            </button>
+          )}
+        </div>
       </div>
     </section>
   );

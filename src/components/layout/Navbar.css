@@ -193,3 +193,67 @@
     display: none;
   }
 }
+
+/* Quota Pill & Upgrade Styles */
+.quota-indicator-pill {
+  background: var(--gray-150);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 100px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.quota-indicator-pill:hover {
+  background: var(--brand-50);
+  color: var(--brand-700);
+  border-color: var(--brand-200);
+}
+
+.quota-icon {
+  color: var(--brand-600);
+}
+
+.upgrade-nav-btn {
+  box-shadow: 0 2px 8px rgba(45, 113, 89, 0.25);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  animation: subtlePulse 4s infinite ease-in-out;
+}
+
+@keyframes subtlePulse {
+  0%, 100% {
+    box-shadow: 0 2px 8px rgba(45, 113, 89, 0.25);
+  }
+  50% {
+    box-shadow: 0 4px 14px rgba(45, 113, 89, 0.45);
+  }
+}
+
+.navbar-admin-link {
+  color: var(--brand-700) !important;
+  font-weight: 600 !important;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dropdown-tier-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--brand-700);
+  background: var(--brand-50);
+  padding: 1px 6px;
+  border-radius: 4px;
+  display: inline-block;
+  margin-top: 2px;
+}
+
